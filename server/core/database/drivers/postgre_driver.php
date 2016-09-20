@@ -22,6 +22,7 @@
 namespace core\database\drivers;
 
 
+use core\config\config;
 use core\database\driver;
 
 /**
@@ -42,7 +43,7 @@ class postgre_driver implements driver{
 	 * postgre_driver constructor.
 	 */
 	public function __construct() {
-		$dsn    = "host=".db_host." port=".db_port." dbname=".db_name." user=".db_user." password=".db_pass."options='--client_encoding=".db_charset."'";
+		$dsn    = "host=".config::get('db_host')." port=".config::get('db_port')." dbname=".config::get('db_name')." user=".config::get('db_user')." password=".config::get('db_pass')."options='--client_encoding=".config::get('db_charset')."'";
 		$this->object   = pg_connect($dsn);
 		if(!$this->object){
 			$this->error = true;

@@ -22,6 +22,7 @@
 namespace core\database\drivers;
 
 
+use core\config\config;
 use core\database\driver;
 
 /**
@@ -46,9 +47,9 @@ class pdo_driver implements driver{
 	 * pdo_driver constructor.
 	 */
 	public function __construct() {
-		$dsn    = 'mysql:dbname='.db_name.';host='.db_host.';charset='.db_charset.'';
+		$dsn    = 'mysql:dbname='.config::get('db_name').';host='.config::get('db_host').';charset='.config::get('db_charset').'';
 		try{
-			$this->object = new \PDO($dsn,db_user,db_pass);
+			$this->object = new \PDO($dsn,config::get('db_user'),config::get('db_pass'));
 		}catch (\PDOException $e){
 			$this->error = true;
 			$this->object = $e->getMessage();

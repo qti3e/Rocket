@@ -22,6 +22,7 @@
 namespace core\database\drivers;
 
 
+use core\config\config;
 use core\database\driver;
 
 /**
@@ -46,11 +47,11 @@ class sqlserver_driver implements driver{
 	 * sqlserver_driver constructor.
 	 */
 	public function __construct() {
-		$serverName = db_host.", ".db_port;
+		$serverName = config::get('db_host').", ".config::get('db_port');
 		$info       = [
-			'Database'  => db_name,
-			'UID'       => db_user,
-			'PWD'       => db_pass
+			'Database'  => config::get('db_name'),
+			'UID'       => config::get('db_user'),
+			'PWD'       => config::get('db_pass')
 		];
 		$this->object   = sqlsrv_connect($serverName,$info);
 		if(!$this->object){
