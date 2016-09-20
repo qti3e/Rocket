@@ -1,77 +1,22 @@
 <?php
-/**
- * Websocket library
- */
 
-namespace core\ws;
+//require_once('./daemonize.php');
+require_once('./users.php');
 
-/**
- * WebSocketServer class
- * @package core\ws
- */
 abstract class WebSocketServer {
-  /**
-   * User class
-   * Each user will be an object from this class
-   * @var string
-   */
-  protected $userClass = 'core\\ws\\WebSocketUser'; // redefine this if you want a custom user class.  The custom user class should inherit from WebSocketUser.
-  /**
-   * Maximum buffer size user can send in each message
-   * @var int
-   */
-  protected $maxBufferSize;
-  /**
-   * Socket resource
-   * @var resource
-   */
+
+  protected $userClass = 'WebSocketUser'; // redefine this if you want a custom user class.  The custom user class should inherit from WebSocketUser.
+  protected $maxBufferSize;        
   protected $master;
-  /**
-   * All of sockets
-   * @var array
-   */
   protected $sockets                              = array();
-  /**
-   * Array of users
-   * @var array
-   */
   protected $users                                = array();
-  /**
-   * Collect held messages
-   * @var array
-   */
   protected $heldMessages                         = array();
-  /**
-   * Print outputs to screen when it's true
-   * @var bool
-   */
   protected $interactive                          = true;
-  /**
-   * @var bool
-   */
   protected $headerOriginRequired                 = false;
-  /**
-   * @var bool
-   */
   protected $headerSecWebSocketProtocolRequired   = false;
-  /**
-   *
-   * @var bool
-   */
   protected $headerSecWebSocketExtensionsRequired = false;
-  /**
-   * List of blocked IPs
-   * @var array
-   */
   protected $blockedIP                            = array();
 
-  /**
-   * WebSocketServer constructor.
-   *
-   * @param     $addr
-   * @param     $port
-   * @param int $bufferLength
-   */
   function __construct($addr, $port, $bufferLength = 2048) {
     $this->maxBufferSize = $bufferLength;
     $this->master = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)  or die("Failed: socket_create()");
@@ -80,49 +25,19 @@ abstract class WebSocketServer {
     socket_listen($this->master,20)                               or die("Failed: socket_listen()");
     $this->sockets['m'] = $this->master;
     $this->stdout("Server started\nListening on: $addr:$port\nMaster socket: ".$this->master);
+
+    
   }
 
-  /**
-   * Called immediately when the data is recieved.
-   * @param WebSocketUser $user
-   * @param               $message
-   *
-   * @return mixed
-   */
-  abstract protected function process(WebSocketUser $user,$message);
+  abstract protected function process($user,$message); // Called immediately when the data is recieved. 
+  abstract protected function connected($user);        // Called after the handshake response is sent to the client.
+  abstract protected function closed($user);           // Called after the connection is closed.
 
-  /**
-   * Called after the handshake response is sent to the client.
-   * @param WebSocketUser $user
-   *
-   * @return mixed
-   */
-  abstract protected function connected(WebSocketUser $user);
-
-  /**
-   * Called after the connection is closed.
-   * @param WebSocketUser $user
-   *
-   * @return mixed
-   */
-  abstract protected function closed(WebSocketUser $user);
-
-  /**
-   * Override to handle a connecting user, after the instance of the User is created,
-   * but before the handshake has completed
-   * @param WebSocketUser $user
-   *
-   * @return void
-   */
-  protected function connecting(WebSocketUser $user) {}
-
-  /**
-   * Send message to user
-   * @param $user
-   * @param $message
-   *
-   * @return void
-   */
+  protected function connecting($user) {
+    // Override to handle a connecting user, after the instance of the User is created, but before
+    // the handshake has completed.
+  }
+  
   protected function send($user, $message) {
     if ($user->handshake) {
       $message = $this->frame($message,$user);
@@ -135,18 +50,13 @@ abstract class WebSocketServer {
     }
   }
 
-  /**
-   * Override this for any process that should happen periodically.  Will happen at least once
-   * per second, but possibly more often.
-   * @return void
-   */
-  protected function tick() {}
+  protected function tick() {
+    // Override this for any process that should happen periodically.  Will happen at least once
+    // per second, but possibly more often.
+  }
 
-  /**
-   * Core maintenance processes, such as retrying failed messages.
-   * @return void
-   */
   protected function _tick() {
+    // Core maintenance processes, such as retrying failed messages.
     foreach ($this->heldMessages as $key => $hm) {
       $found = false;
       foreach ($this->users as $currentUser) {
@@ -239,12 +149,6 @@ abstract class WebSocketServer {
     }
   }
 
-  /**
-   * Handle user connection
-   * @param $socket
-   *
-   * @return void
-   */
   protected function connect($socket) {
     $user = new $this->userClass(uniqid('u'), $socket);
     $this->users[$user->id] = $user;
@@ -252,14 +156,6 @@ abstract class WebSocketServer {
     $this->connecting($user);
   }
 
-  /**
-   * Disconnect from a socket
-   * @param           $socket
-   * @param bool|true $triggerClosed
-   * @param null      $sockErrNo
-   *
-   * @return void
-   */
   protected function disconnect($socket, $triggerClosed = true, $sockErrNo = null) {
     $disconnectedUser = $this->getUserBySocket($socket);
     
@@ -286,13 +182,6 @@ abstract class WebSocketServer {
     }
   }
 
-  /**
-   * Do hand shake
-   * @param $user
-   * @param $buffer
-   *
-   * @return void
-   */
   protected function doHandshake($user, $buffer) {
     $magicGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     $headers = array();
@@ -372,77 +261,35 @@ abstract class WebSocketServer {
     $this->connected($user);
   }
 
-  /**
-   * Override and return false if the host is not one that you would expect.
-   * @example You only want to accept hosts from the my-domain.com domain,
-   *  but you receive a host from malicious-site.com instead.
-   * @param $hostName
-   *
-   * @return bool
-   */
   protected function checkHost($hostName) {
-    return true;
+    return true; // Override and return false if the host is not one that you would expect.
+                 // Ex: You only want to accept hosts from the my-domain.com domain,
+                 // but you receive a host from malicious-site.com instead.
   }
 
-  /**
-   * Override and return false if the origin is not one that you would expect.
-   * @param $origin
-   *
-   * @return bool
-   */
   protected function checkOrigin($origin) {
-    return true;
+    return true; // Override and return false if the origin is not one that you would expect.
   }
 
-  /**
-   * Override and return false if a protocol is not found that you would expect.
-   * @param $protocol
-   *
-   * @return bool
-   */
   protected function checkWebsocProtocol($protocol) {
-    return true;
+    return true; // Override and return false if a protocol is not found that you would expect.
   }
 
-  /**
-   * Override and return false if an extension is not found that you would expect.
-   * @param $extensions
-   *
-   * @return bool
-   */
   protected function checkWebsocExtensions($extensions) {
-    return true;
+    return true; // Override and return false if an extension is not found that you would expect.
   }
 
-  /**
-   *  return either "Sec-WebSocket-Protocol: SelectedProtocolFromClientList\r\n" or return an empty string.
-   *  The carriage return/newline combo must appear at the end of a non-empty string, and must not
-   * appear at the beginning of the string nor in an otherwise empty string, or it will be considered part of
-   * the response body, which will trigger an error in the client as it will not be formatted correctly.
-   * @param $protocol
-   *
-   * @return string
-   */
   protected function processProtocol($protocol) {
-    return "";
+    return ""; // return either "Sec-WebSocket-Protocol: SelectedProtocolFromClientList\r\n" or return an empty string.  
+           // The carriage return/newline combo must appear at the end of a non-empty string, and must not
+           // appear at the beginning of the string nor in an otherwise empty string, or it will be considered part of 
+           // the response body, which will trigger an error in the client as it will not be formatted correctly.
   }
 
-  /**
-   * return either "Sec-WebSocket-Extensions: SelectedExtensions\r\n" or return an empty string.
-   * @param $extensions
-   *
-   * @return string
-   */
   protected function processExtensions($extensions) {
-    return "";
+    return ""; // return either "Sec-WebSocket-Extensions: SelectedExtensions\r\n" or return an empty string.
   }
 
-  /**
-   * Return user object by socket
-   * @param $socket
-   *
-   * @return null
-   */
   protected function getUserBySocket($socket) {
     foreach ($this->users as $user) {
       if ($user->socket == $socket) {
@@ -452,38 +299,18 @@ abstract class WebSocketServer {
     return null;
   }
 
-  /**
-   * Print out reports to the screen
-   * @param $message
-   *
-   * @return void
-   */
   public function stdout($message) {
     if ($this->interactive) {
       echo "$message\n";
     }
   }
 
-  /**
-   * Print out errors to the console screen
-   * @param $message
-   *
-   * @return void
-   */
   public function stderr($message) {
     if ($this->interactive) {
       echo "$message\n";
     }
   }
 
-  /**
-   * @param            $message
-   * @param            $user
-   * @param string     $messageType
-   * @param bool|false $messageContinues
-   *
-   * @return string
-   */
   protected function frame($message, $user, $messageType='text', $messageContinues=false) {
     switch ($messageType) {
       case 'continuous':
@@ -552,15 +379,8 @@ abstract class WebSocketServer {
 
     return chr($b1) . chr($b2) . $lengthField . $message;
   }
-
-  /**
-   * Check packet if he have more than one frame and process each frame individually
-   * @param $length
-   * @param $packet
-   * @param $user
-   *
-   * @return void
-   */
+  
+  //check packet if he have more than one frame and process each frame individually
   protected function split_packet($length,$packet, $user) {
     //add PartialPacket and calculate the new $length
     if ($user->handlingPartialPacket) {
@@ -599,11 +419,6 @@ abstract class WebSocketServer {
     }
   }
 
-  /**
-   * @param $headers
-   *
-   * @return int
-   */
   protected function calcoffset($headers) {
     $offset = 2;
     if ($headers['hasmask']) {
@@ -617,12 +432,6 @@ abstract class WebSocketServer {
     return $offset;
   }
 
-  /**
-   * @param $message
-   * @param $user
-   *
-   * @return bool|int|string
-   */
   protected function deframe($message, &$user) {
     //echo $this->strtohex($message);
     $headers = $this->extractHeaders($message);
@@ -687,12 +496,6 @@ abstract class WebSocketServer {
     return false;
   }
 
-  /**
-   * Extract headers and convert header string to array
-   * @param $message
-   *
-   * @return array
-   */
   protected function extractHeaders($message) {
     $header = array('fin'     => $message[0] & chr(128),
             'rsv1'    => $message[0] & chr(64),
@@ -732,13 +535,6 @@ abstract class WebSocketServer {
     return $header;
   }
 
-  /**
-   * Extract payload
-   * @param $message
-   * @param $headers
-   *
-   * @return string
-   */
   protected function extractPayload($message,$headers) {
     $offset = 2;
     if ($headers['hasmask']) {
@@ -753,12 +549,6 @@ abstract class WebSocketServer {
     return substr($message,$offset);
   }
 
-  /**
-   * @param $headers
-   * @param $payload
-   *
-   * @return int
-   */
   protected function applyMask($headers,$payload) {
     $effectiveMask = "";
     if ($headers['hasmask']) {
@@ -776,15 +566,7 @@ abstract class WebSocketServer {
     }
     return $effectiveMask ^ $payload;
   }
-
-  /**
-   * override this method if you are using an extension where the RSV bits are used.
-   * @param $headers
-   * @param $user
-   *
-   * @return bool
-   */
-  protected function checkRSVBits($headers,$user) {
+  protected function checkRSVBits($headers,$user) { // override this method if you are using an extension where the RSV bits are used.
     if (ord($headers['rsv1']) + ord($headers['rsv2']) + ord($headers['rsv3']) > 0) {
       //$this->disconnect($user); // todo: fail connection
       return true;
@@ -792,12 +574,6 @@ abstract class WebSocketServer {
     return false;
   }
 
-  /**
-   * Convert string to hex
-   * @param $str
-   *
-   * @return string
-   */
   protected function strtohex($str) {
     $strout = "";
     for ($i = 0; $i < strlen($str); $i++) {
@@ -819,12 +595,6 @@ abstract class WebSocketServer {
     return $strout . "\n";
   }
 
-  /**
-   * Print headers to console output
-   * @param $headers
-   *
-   * @return void
-   */
   protected function printHeaders($headers) {
     echo "Array\n(\n";
     foreach ($headers as $key => $value) {
@@ -840,12 +610,6 @@ abstract class WebSocketServer {
     echo ")\n";
   }
 
-  /**
-   * Return User IP
-   * @param $user
-   *
-   * @return array
-   */
   protected function getUserIP($user){
     socket_getpeername($user->socket,$address,$port);
     return [
@@ -854,12 +618,6 @@ abstract class WebSocketServer {
     ];
   }
 
-  /**
-   * Check if a ip is blocked or not
-   * @param $ip
-   *
-   * @return bool
-   */
   protected function checkIP($ip){
     if(isset($this->blockedIP[$ip])){
       if(time() >= $this->blockedIP[$ip]){
@@ -871,13 +629,6 @@ abstract class WebSocketServer {
     return true;
   }
 
-  /**
-   * Block user ip address and close all of the connections from socket
-   * @param     $ip
-   * @param int $expire
-   *
-   * @return void
-   */
   protected function blockIP($ip,$expire = 1800){
     $this->blockedIP[$ip] = time()+$expire;//Unblock user automatically after 30 minutes (1800s)
     /**
@@ -892,25 +643,12 @@ abstract class WebSocketServer {
     }
   }
 
-  /**
-   * Block user ip and close only connection from that user
-   * @param     $user
-   * @param int $expire
-   *
-   * @return void
-   */
   protected function blockUser($user,$expire = 1800){
     $ip = $this->getUserIP($user)['address'];
     $this->blockedIP[$ip] = time()+$expire;//Unblock user automatically after 30 minutes (1800s)
     socket_close($user);
   }
 
-  /**
-   * Unblock an IP address
-   * @param $ip
-   *
-   * @return void
-   */
   protected function unblockIP($ip){
     unset($this->blockedIP[$ip]);
   }

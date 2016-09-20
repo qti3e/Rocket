@@ -27,9 +27,16 @@ class config {
 		//Default value for host address
 		'host'          => '0.0.0.0',
 		//Default program port address
-		'port'          => 98765,
+		'port'          => 8085,
 		//Default buffer length size
-		'bufferLength'  => 2048
+		'bufferLength'  => 2048,
+		'db_driver'     => 'mysqli',
+		'db_host'       => '127.0.0.1',
+		'db_user'       => 'root',
+		'db_pass'       => '',
+		'db_name'       => '',
+		'db_port'       => '3306',
+		'db_charset'    => 'UTF-8'
 	];
 
 	/**
@@ -39,7 +46,7 @@ class config {
 	 *
 	 * @return bool
 	 */
-	public function set($name,$value){
+	public static function set($name,$value){
 		//In config names upper and lower cases doesn't have any difference
 		$name   = strtolower($name);
 		//Configs are like constants and we don't allow to them to change when they registered before
@@ -63,7 +70,7 @@ class config {
 	 * @return bool|mixed
 	 *  if config does not exist returns value stored at $default array and if it does not exists too it will return $def value
 	 */
-	public function get($name,$def = false){
+	public static function get($name,$def = false){
 		//In config names upper and lower cases doesn't have any difference
 		$name   = strtolower($name);
 		if(isset(static::$configs[$name])){
@@ -83,7 +90,7 @@ class config {
 	 * @return bool|mixed
 	 */
 	public function __set($name, $value) {
-		return $this->set($name,$value);
+		return static::set($name,$value);
 	}
 
 	/**
@@ -94,7 +101,7 @@ class config {
 	 * @return bool|mixed
 	 */
 	public function __get($name) {
-		return $this->get($name,false);
+		return static::get($name,false);
 	}
 
 	/**
