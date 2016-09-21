@@ -22,6 +22,7 @@
 namespace core\database\drivers;
 
 
+use core\config\config;
 use core\database\driver;
 
 /**
@@ -38,7 +39,7 @@ class sqlite_driver implements driver{
 	 * sqlite_driver constructor.
 	 */
 	public function __construct() {
-		$this->object   = new \SQLite3(db_name,null,db_pass);
+		$this->object   = new \SQLite3(config::get('db_name'),config::get('db_flags'),config::get('db_pass'));
 	}
 
 	/**
