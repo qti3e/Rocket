@@ -9,7 +9,7 @@
 
 namespace core\factory;
 
-
+//todo catching the process
 /**
  * Class caller
  * @package core\factory
@@ -110,9 +110,11 @@ class call {
 		if(!is_callable($function)){
 			return static::notCallable;
 		}
+		$f          = $function;
 		$function   = new \ReflectionFunction($function);
 		$parameters = $function->getParameters();
 		$count      = count($parameters);
+		$values     = [];
 		for($i  = 0;$i < $count;$i++){
 			$name   = $parameters[$i]->getName();
 			$type   = $parameters[$i]->getType();
@@ -124,6 +126,6 @@ class call {
 				$values[]   = self::newInstance($type);
 			}
 		}
-		return call_user_func_array($function,$values);
+		return call_user_func_array($f,$values);
 	}
 }
