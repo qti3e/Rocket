@@ -16,13 +16,9 @@ namespace core\factory;
  */
 class call {
 	/**
-	 * Will return it when class does not exists
+	 * It will return when method is not callable
 	 */
-	const ClassNotEx    = -100;
-	/**
-	 * Will return it when method does not exists
-	 */
-	const MethodNotEx   = -101;
+	const notCallable   = -100;
 	/**
 	 * Convert name to class name
 	 * @var array
@@ -38,29 +34,25 @@ class call {
 	 * @return mixed
 	 */
 	public static function method($class,$method,$defaultValues = []){
-		if(!is_object($class) && !class_exists($class)){
-			return static::ClassNotEx;
+		if(!is_callable([$class,$method])){
+			return static::notCallable;
 		}
 		$class = new \ReflectionClass($class);
-		if($class->hasMethod($method) && $class->getMethod($method)->isPublic()){
-			$values     = [];
-			$parameters = $class->getMethod($method)->getParameters();
-			$count      = count($parameters);
-			for($i  = 0;$i < $count;$i++){
-				$name   = $parameters[$i]->getName();
-				$type   = $parameters[$i]->getType();
-				if(isset($defaultValues[$name])){
-					$values[]   = $defaultValues[$name];
-				}elseif ($type === null){
-					$values[]   = self::newInstance(self::name2type($name));
-				}else{
-					$values[]   = self::newInstance($type);
-				}
+		$values     = [];
+		$parameters = $class->getMethod($method)->getParameters();
+		$count      = count($parameters);
+		for($i  = 0;$i < $count;$i++){
+			$name   = $parameters[$i]->getName();
+			$type   = $parameters[$i]->getType();
+			if(isset($defaultValues[$name])){
+				$values[]   = $defaultValues[$name];
+			}elseif ($type === null){
+				$values[]   = self::newInstance(self::name2type($name));
+			}else{
+				$values[]   = self::newInstance($type);
 			}
-			return call_user_func_array([$class,$method],$values);
-
 		}
-		return static::MethodNotEx;
+		return call_user_func_array([$class,$method],$values);
 	}
 
 	/**
@@ -104,5 +96,34 @@ class call {
 	 */
 	private static function name2type($name){
 		return isset(static::$map[$name]) ? static::$map[$name] : $name;
+	}
+
+	/**
+	 * Call a function that is outside of a class
+	 * @param       $function
+	 * @param array $defaultValues
+	 *
+	 * @return int|mixed
+	 *
+	 */
+	public static function func($function,$defaultValues = []){
+		if(!is_callable($function)){
+			return static::notCallable;
+		}
+		$function   = new \ReflectionFunction($function);
+		$parameters = $function->getParameters();
+		$count      = count($parameters);
+		for($i  = 0;$i < $count;$i++){
+			$name   = $parameters[$i]->getName();
+			$type   = $parameters[$i]->getType();
+			if(isset($defaultValues[$name])){
+				$values[]   = $defaultValues[$name];
+			}elseif ($type === null){
+				$values[]   = self::newInstance(self::name2type($name));
+			}else{
+				$values[]   = self::newInstance($type);
+			}
+		}
+		return call_user_func_array($function,$values);
 	}
 }
