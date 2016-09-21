@@ -98,11 +98,16 @@ if( ! defined('CRLF')) define('CRLF', sprintf('%s%s', chr(13), chr(10)));
  *
  * Sorted Sets:
  * @method int           zCard(string $key)
- * @method array         zRangeByScore(string $key, mixed $start, mixed $stop, array $args = null)
- * @method array         zRevRangeByScore(string $key, mixed $start, mixed $stop, array $args = null)
- * @method int           zRemRangeByScore(string $key, mixed $start, mixed $stop)
+ * @method array         zRangeByScore(string $key, mixed $min, mixed $max, array $args = null)
+ * @method array         zRevRangeByScore(string $key, mixed $min, mixed $max, array $args = null)
+ * @method int           zRemRangeByScore(string $key, mixed $min, mixed $max)
  * @method array         zRange(string $key, mixed $start, mixed $stop, array $args = null)
  * @method array         zRevRange(string $key, mixed $start, mixed $stop, array $args = null)
+ * @method int           zAdd(string $key,int $score,mixed $member)
+ * @method int           zIncrBy(string $key,mixed $increment,int $member)
+ * @method int           zScore(string $key,mixed $member)
+ * @method int           zCount(string $key,int $min,int $max)
+ * @method int           zRank(string $Key,mixed $member)
  * TODO
  *
  * Pub/Sub
