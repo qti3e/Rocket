@@ -25,6 +25,30 @@ class call {
 	 */
 	protected static $map   = [];
 	/**
+	 * @var array
+	 */
+	protected static $defaults  = [];
+
+	/**
+	 * Register a default value
+	 * @param $name
+	 * @param $value
+	 *
+	 * @return void
+	 */
+	public static function register($name,$value){
+		static::$defaults[$name]    = $value;
+	}
+
+	/**
+	 * Clear all of default values
+	 * @return void
+	 */
+	public static function clear(){
+		static::$defaults   = [];
+	}
+
+	/**
 	 * Call a function
 	 * @param       $class
 	 * @param       $method
@@ -34,6 +58,7 @@ class call {
 	 * @return mixed
 	 */
 	public static function method($class,$method,$defaultValues = []){
+		$defaultValues  = $defaultValues+static::$defaults;
 		if(!is_callable([$class,$method])){
 			return static::notCallable;
 		}
@@ -64,6 +89,7 @@ class call {
 	 * @return null|object
 	 */
 	public static function newInstance($class,$defaultValues = []){
+		$defaultValues  = $defaultValues+static::$defaults;
 		if(class_exists($class) || is_object($class)){
 			$class = new \ReflectionClass($class);
 			if($class->getConstructor() === null || $class->getConstructor()->getNumberOfParameters() == 0){
@@ -107,6 +133,7 @@ class call {
 	 *
 	 */
 	public static function func($function,$defaultValues = []){
+		$defaultValues  = $defaultValues+static::$defaults;
 		if(!is_callable($function)){
 			return static::notCallable;
 		}
