@@ -23,6 +23,14 @@ abstract class routerParent {
 	public function checkOrigin($origin){return true;}
 
 	/**
+	 * Check user host name before connection
+	 * @param $hostName
+	 *
+	 * @return void
+	 */
+	public function checkHost($hostName){}
+
+	/**
 	 * Check user ip (for blocking)
 	 * @param $ip
 	 *
@@ -62,4 +70,22 @@ abstract class routerParent {
 	 * @return void
 	 */
 	public function closed(){}
+
+	/**
+	 * Check client protocol
+	 * @param array $protocol
+	 *  List of all sub-protocols that client supports
+	 * @return bool
+	 * Return false when you don't support any of them
+	 */
+	public function checkProtocol($protocol){return true;}
+
+	/**
+	 * Select a protocol to speak with client
+	 * @param $protocol
+	 *  List of all sub-protocols that client supports
+	 *
+	 * @return string
+	 */
+	public function processProtocol($protocol){return '';}
 }
