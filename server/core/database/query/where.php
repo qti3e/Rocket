@@ -22,8 +22,6 @@
 namespace core\database\query;
 
 
-use core\database\query;
-
 /**
  * Class where
  * @package core\database\query
