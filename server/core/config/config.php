@@ -28,15 +28,24 @@ class config {
 		'host'          => '0.0.0.0',
 		//Default program port address
 		'port'          => 8085,
-		//Default buffer length size
+		//Default buffer length size for socket connections
 		'bufferLength'  => 2048,
+		//Database driver (type)
 		'db_driver'     => 'mysqli',
+		//Database host
 		'db_host'       => '127.0.0.1',
+		//Database username
 		'db_user'       => 'root',
+		//Database password
 		'db_pass'       => '',
+		//Database name
 		'db_name'       => '',
+		//Database connection port
 		'db_port'       => '3306',
-		'db_charset'    => 'UTF-8'
+		//Database character set
+		'db_charset'    => 'UTF-8',
+		//Database flags, only used in sqlite driver
+		'db_flags'      => null
 	];
 
 	/**
@@ -121,5 +130,45 @@ class config {
 	 */
 	public function __sleep() {
 		return get_object_vars($this);
+	}
+
+	/**
+	 * Multiple config set
+	 * @param $configs
+	 *
+	 * @return int
+	 */
+	public static function mSet($configs){
+		$count  = count($configs);
+		$keys   = array_keys($configs);
+		$return = 0;
+		for($i  = 0;$i < $count;$i++){
+			if(static::set($keys[$i],$configs[$keys[$i]])){
+				$return++;
+			}
+		}
+		return $return;
+	}
+
+	/**
+	 * Set default values for config
+	 * It's not static because only system plugins should be able to change default values
+	 * @param $configs
+	 *
+	 * @return int
+	 *  Returns number of successful sets
+	 */
+	public function mDefSet($configs){
+		$count  = count($configs);
+		$keys   = array_keys($configs);
+		$return = 0;
+		for($i  = 0;$i < $count;$i++){
+			$name   = strtolower($keys[$i]);
+			if(!isset(static::$defaults[$name])){
+				$return++;
+				static::$defaults[$name]    = $configs[$keys[$i]];
+			}
+		}
+		return $return;
 	}
 }
