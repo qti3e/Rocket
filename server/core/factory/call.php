@@ -62,6 +62,7 @@ class call {
 		if(!is_callable([$class,$method])){
 			return static::notCallable;
 		}
+		$c      = $class;
 		$class = new \ReflectionClass($class);
 		$values     = [];
 		$parameters = $class->getMethod($method)->getParameters();
@@ -77,7 +78,7 @@ class call {
 				$values[]   = self::newInstance($type);
 			}
 		}
-		return call_user_func_array([$class,$method],$values);
+		return call_user_func_array([$c,$method],$values);
 	}
 
 	/**
