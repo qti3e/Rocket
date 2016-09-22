@@ -35,7 +35,7 @@ class CommandController {
 	 * Print welcome message and ask commands form user
 	 */
 	public function __construct() {
-		print "Welcome to youn cli mode\n>";
+		print "Welcome to Rocket cli mode\n>";
 		while(strtolower($input = trim(fgets(STDIN)).' ') !== 'exit '){
 			if(!empty(trim($input))){
 				$input      .=  ' | echo';
