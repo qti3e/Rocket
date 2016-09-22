@@ -23,7 +23,21 @@ class call {
 	 * Convert name to class name
 	 * @var array
 	 */
-	protected static $map   = [];
+	protected static $map   = [
+		'redis'     => 'core\\redis\\redis',
+		'lang'      => 'core\\i18n\\lang',
+		'i18n'      => 'core\\i18n\\lang',
+		'country'   => 'core\\i18n\\country',
+		'helper'    => 'core\\helpers\\helper',
+		'session'   => 'core\\session\\session',
+		'validator' => 'core\\validate\\validator',
+		'cdn'       => 'core\\cdn\\cdns',
+		'date'      => 'core\\date\\date.php',
+		'ftp'       => 'core\\ftp\\ftp',
+		'algorithms'=> 'core\\algorithms\\algorithms',
+		'call'      => 'core\\factory\\call'
+	];
+
 	/**
 	 * @var array
 	 */
