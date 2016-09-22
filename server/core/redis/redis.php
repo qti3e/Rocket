@@ -1,5 +1,7 @@
 <?php
 namespace core\redis;
+use core\config\config;
+
 if( ! defined('CRLF')) define('CRLF', sprintf('%s%s', chr(13), chr(10)));
 
 /**
@@ -133,8 +135,8 @@ class redis {
 	 * Socket connection to the Redis server or Redis library instance
 	 * @var resource|Redis
 	 */
-	protected $redis;
-	protected $redisMulti;
+	protected static $redis;
+	protected static $redisMulti;
 
 	/**
 	 * Host of the Redis server
@@ -169,12 +171,12 @@ class redis {
 	/**
 	 * @var bool
 	 */
-	protected $closeOnDestruct = TRUE;
+	protected $closeOnDestruct = FALSE;
 
 	/**
 	 * @var bool
 	 */
-	protected $connected = FALSE;
+	protected static $connected = FALSE;
 
 	/**
 	 * @var bool
@@ -251,23 +253,16 @@ class redis {
 	/**
 	 * Creates a Redisent connection to the Redis server on host {@link $host} and port {@link $port}.
 	 * $host may also be a path to a unix socket or a string in the form of tcp://[hostname]:[port] or unix://[path]
-	 *
-	 * @param string $host The hostname of the Redis server
-	 * @param integer $port The port number of the Redis server
-	 * @param float $timeout  Timeout period in seconds
-	 * @param string $persistent  Flag to establish persistent connection
-	 * @param int $db The selected datbase of the Redis server
-	 * @param string $password The authentication password of the Redis server
 	 */
-	public function __construct($host = '127.0.0.1', $port = 6379, $timeout = null, $persistent = '', $db = 0, $password = null)
+	public function __construct()
 	{
-		$this->host = (string) $host;
-		$this->port = (int) $port;
-		$this->timeout = $timeout;
-		$this->persistent = (string) $persistent;
+		$this->host = (string) config::get('redis_host');
+		$this->port = (int) config::get('redis_port');
+		$this->timeout = config::get('redis_timeout');
+		$this->persistent = (string) config::get('redis_persistent');
 		$this->standalone = ! extension_loaded('redis');
-		$this->authPassword = $password;
-		$this->selectedDb = (int)$db;
+		$this->authPassword = config::get('redis_password');
+		$this->selectedDb = (int)config::get('redis_db');
 		$this->convertHost();
 	}
 
@@ -327,7 +322,7 @@ class redis {
 		if ($this->standalone) {
 			return $this;
 		}
-		if($this->connected) {
+		if(static::$connected) {
 			throw new CredisException('Cannot force Credis_Client to use standalone PHP driver after a connection has already been established.');
 		}
 		$this->standalone = TRUE;
@@ -381,7 +376,7 @@ class redis {
 	 */
 	public function connect()
 	{
-		if ($this->connected) {
+		if (static::$connected) {
 			return $this;
 		}
 		if ($this->standalone) {
@@ -396,15 +391,15 @@ class redis {
 				$remote_socket .= '/'.$this->persistent;
 				$flags = $flags | STREAM_CLIENT_PERSISTENT;
 			}
-			$result = $this->redis = @stream_socket_client($remote_socket, $errno, $errstr, $this->timeout !== null ? $this->timeout : 2.5, $flags);
+			$result = static::$redis = @stream_socket_client($remote_socket, $errno, $errstr, $this->timeout !== null ? $this->timeout : 2.5, $flags);
 		}
 		else {
-			if ( ! $this->redis) {
-				$this->redis = new Redis;
+			if ( ! static::$redis) {
+				static::$redis = new Redis;
 			}
 			$result = $this->persistent
-				? $this->redis->pconnect($this->host, $this->port, $this->timeout, $this->persistent)
-				: $this->redis->connect($this->host, $this->port, $this->timeout);
+				? static::$redis->pconnect($this->host, $this->port, $this->timeout, $this->persistent)
+				: static::$redis->connect($this->host, $this->port, $this->timeout);
 		}
 
 		// Use recursion for connection retries
@@ -419,7 +414,7 @@ class redis {
 		}
 
 		$this->connectFailures = 0;
-		$this->connected = TRUE;
+		static::$connected = TRUE;
 
 		// Set read timeout
 		if ($this->readTimeout) {
@@ -439,7 +434,7 @@ class redis {
 	 */
 	public function isConnected()
 	{
-		return $this->connected;
+		return static::$connected;
 	}
 	/**
 	 * Set the read timeout for the connection. Use 0 to disable timeouts entirely (or use a very long timeout
@@ -455,16 +450,16 @@ class redis {
 			throw new CredisException('Timeout values less than -1 are not accepted.');
 		}
 		$this->readTimeout = $timeout;
-		if ($this->connected) {
+		if (static::$connected) {
 			if ($this->standalone) {
 				$timeout = $timeout <= 0 ? 315360000 : $timeout; // Ten-year timeout
-				stream_set_blocking($this->redis, TRUE);
-				stream_set_timeout($this->redis, (int) floor($timeout), ($timeout - floor($timeout)) * 1000000);
+				stream_set_blocking(static::$redis, TRUE);
+				stream_set_timeout(static::$redis, (int) floor($timeout), ($timeout - floor($timeout)) * 1000000);
 			} else if (defined('Redis::OPT_READ_TIMEOUT')) {
 				// supported in phpredis 2.2.3
 				// a timeout value of -1 means reads will not timeout
 				$timeout = $timeout == 0 ? -1 : $timeout;
-				$this->redis->setOption(Redis::OPT_READ_TIMEOUT, $timeout);
+				static::$redis->setOption(Redis::OPT_READ_TIMEOUT, $timeout);
 			}
 		}
 		return $this;
@@ -476,11 +471,11 @@ class redis {
 	public function close()
 	{
 		$result = TRUE;
-		if ($this->connected && ! $this->persistent) {
+		if (static::$connected && ! $this->persistent) {
 			try {
-				$result = $this->standalone ? fclose($this->redis) : $this->redis->close();
-				$this->connected = FALSE;
-			} catch (Exception $e) {
+				$result = $this->standalone ? fclose(static::$redis) : static::$redis->close();
+				static::$connected = FALSE;
+			} catch (\Exception $e) {
 				; // Ignore exceptions on close
 			}
 		}
@@ -684,9 +679,9 @@ class redis {
 	 * @param string|array $pattern
 	 * @return array
 	 */
-	public function unsubscribe()
+	public function unsubscribe(...$pattern)
 	{
-		list($command, $channel, $subscribedChannels) = $this->__call('unsubscribe', func_get_args());
+		list($command, $channel, $subscribedChannels) = $this->__call('unsubscribe', $pattern);
 		$this->subscribed = $subscribedChannels > 0;
 		return array($command, $channel, $subscribedChannels);
 	}
@@ -1020,14 +1015,14 @@ class redis {
 						return $this;
 					} else {
 						$this->isMulti = TRUE;
-						$this->redisMulti = call_user_func_array(array($this->redis, $name), $args);
+						static::$redisMulti = call_user_func_array(array(static::$redis, $name), $args);
 						return $this;
 					}
 				}
 				else if($name == 'exec' || $name == 'discard') {
 					$this->isMulti = FALSE;
-					$response = $this->redisMulti->$name();
-					$this->redisMulti = NULL;
+					$response = static::$redisMulti->$name();
+					static::$redisMulti = NULL;
 					#echo "> $name : ".substr(print_r($response, TRUE),0,100)."\n";
 					return $response;
 				}
@@ -1039,29 +1034,29 @@ class redis {
 
 				// Multi and pipeline return self for chaining
 				if($this->isMulti) {
-					call_user_func_array(array($this->redisMulti, $name), $args);
+					call_user_func_array(array(static::$redisMulti, $name), $args);
 					return $this;
 				}
 
 				// Send request, retry one time when using persistent connections on the first request only
 				$this->requests++;
 				try {
-					$response = call_user_func_array(array($this->redis, $name), $args);
-				} catch (RedisException $e) {
+					$response = call_user_func_array(array(static::$redis, $name), $args);
+				} catch (\RedisException $e) {
 					if ($this->persistent && $this->requests == 1 && $e->getMessage() == 'read error on connection') {
-						$this->connected = FALSE;
+						static::$connected = FALSE;
 						$this->connect();
-						$response = call_user_func_array(array($this->redis, $name), $args);
+						$response = call_user_func_array(array(static::$redis, $name), $args);
 					} else {
 						throw $e;
 					}
 				}
 			}
 				// Wrap exceptions
-			catch(RedisException $e) {
+			catch(\RedisException $e) {
 				$code = 0;
-				if ( ! ($result = $this->redis->IsConnected())) {
-					$this->connected = FALSE;
+				if ( ! ($result = static::$redis->IsConnected())) {
+					static::$connected = FALSE;
 					$code = CredisException::CODE_DISCONNECTED;
 				}
 				throw new CredisException($e->getMessage(), $code, $e);
@@ -1092,8 +1087,8 @@ class redis {
 				case 'eval':
 				case 'evalsha':
 				case 'script':
-					$error = $this->redis->getLastError();
-					$this->redis->clearLastError();
+					$error = static::$redis->getLastError();
+				static::$redis->clearLastError();
 					if ($error && substr($error,0,8) == 'NOSCRIPT') {
 						$response = NULL;
 					} else if ($error) {
@@ -1101,8 +1096,8 @@ class redis {
 					}
 					break;
 				default:
-					$error = $this->redis->getLastError();
-					$this->redis->clearLastError();
+					$error = static::$redis->getLastError();
+					static::$redis->clearLastError();
 					if ($error) {
 						throw new CredisException($error);
 					}
@@ -1116,7 +1111,7 @@ class redis {
 	protected function write_command($command)
 	{
 		// Reconnect on lost connection (Redis server "timeout" exceeded since last command)
-		if(feof($this->redis)) {
+		if(feof(static::$redis)) {
 			$this->close();
 			// If a watch or transaction was in progress and connection was lost, throw error rather than reconnect
 			// since transaction/watch state will be lost.
@@ -1124,7 +1119,7 @@ class redis {
 				$this->isMulti = $this->isWatching = FALSE;
 				throw new CredisException('Lost connection to Redis server during watch or transaction.');
 			}
-			$this->connected = FALSE;
+			static::$connected = FALSE;
 			$this->connect();
 			if($this->authPassword) {
 				$this->auth($this->authPassword);
@@ -1137,9 +1132,9 @@ class redis {
 		$commandLen = strlen($command);
 		$lastFailed = FALSE;
 		for ($written = 0; $written < $commandLen; $written += $fwrite) {
-			$fwrite = fwrite($this->redis, substr($command, $written));
+			$fwrite = fwrite(static::$redis, substr($command, $written));
 			if ($fwrite === FALSE || ($fwrite == 0 && $lastFailed)) {
-				$this->connected = FALSE;
+				static::$connected = FALSE;
 				throw new CredisException('Failed to write entire command to stream');
 			}
 			$lastFailed = $fwrite == 0;
@@ -1148,13 +1143,13 @@ class redis {
 
 	protected function read_reply($name = '')
 	{
-		$reply = fgets($this->redis);
+		$reply = fgets(static::$redis);
 		if($reply === FALSE) {
-			$info = stream_get_meta_data($this->redis);
+			$info = stream_get_meta_data(static::$redis);
 			if ($info['timed_out']) {
 				throw new CredisException('Read operation timed out.', CredisException::CODE_TIMED_OUT);
 			} else {
-				$this->connected = FALSE;
+				static::$connected = FALSE;
 				throw new CredisException('Lost connection to Redis server.', CredisException::CODE_DISCONNECTED);
 			}
 		}
@@ -1183,9 +1178,9 @@ class redis {
 			case '$':
 				if ($reply == '$-1') return FALSE;
 				$size = (int) substr($reply, 1);
-				$response = stream_get_contents($this->redis, $size + 2);
+				$response = stream_get_contents(static::$redis, $size + 2);
 				if( ! $response) {
-					$this->connected = FALSE;
+					static::$connected = FALSE;
 					throw new CredisException('Error reading reply.');
 				}
 				$response = substr($response, 0, $size);
