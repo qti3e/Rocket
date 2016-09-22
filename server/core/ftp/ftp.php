@@ -48,14 +48,14 @@ class ftp {
 	protected $is_login     = false;
 
 	/**
-	 * ftp constructor.
+	 * Connect to an FTP server.
 	 *
 	 * @param            $server
 	 * @param int        $port
 	 * @param int        $timeout
 	 * @param bool|false $ssl
 	 */
-	public function __construct($server,$port = 21,$timeout = 90,$ssl = false) {
+	public function connect($server,$port = 21,$timeout = 90,$ssl = false) {
 		if($ssl){
 			$this->connection   = ftp_ssl_connect($server,$port,$timeout);
 		}else{
