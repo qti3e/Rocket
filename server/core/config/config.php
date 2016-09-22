@@ -21,6 +21,7 @@ class config {
 	protected static $configs   = [];
 	/**
 	 * Defaults value for configs
+	 * @note All of keys must be in lower case.
 	 * @var array
 	 */
 	protected static $defaults  = [
@@ -29,7 +30,7 @@ class config {
 		//Default program port address
 		'port'          => 8085,
 		//Default buffer length size for socket connections
-		'bufferLength'  => 2048,
+		'bufferlength'  => 2048,
 		//Database driver (type)
 		'db_driver'     => 'mysqli',
 		//Database host
