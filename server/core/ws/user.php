@@ -1,6 +1,6 @@
 <?php
 /**
- * ${dec}
+ * User object
  *
  * @license GPL
  * @license http://opensource.org/licenses/gpl-license.php GNU Public License, version 3
@@ -9,12 +9,17 @@
 
 namespace core\ws;
 
-
+/**
+ * Class user
+ *      Users instance
+ * @package core\ws
+ */
 class user {
 	public $socket;
 	public $id;
 	public $headers = array();
 	public $handshake = false;
+	public $ip;
 
 	public $handlingPartialPacket = false;
 	public $partialBuffer = "";
