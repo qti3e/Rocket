@@ -73,6 +73,6 @@ class helpCommand implements command{
 				->description('Show helps for a command if exists.')
 				->usage("help [command name]")
 				->addSwitch('(h)tml','Print output in html page format.')
-				->addFlag('(s)ave=file name','Don\'t print output to the screen and save it to entered file name');
+				->addFlag('(s)ave=file name','Won\'t print output to the screen and save it to entered file name');
 	}
 }

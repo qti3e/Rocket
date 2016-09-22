@@ -10,6 +10,7 @@
 namespace core\ws;
 
 
+use application\protocol;
 use core\factory\call;
 
 class server {
@@ -38,6 +39,7 @@ class server {
 	}
 
 	protected function process($user,$message){
+		var_dump($message);
 		call::register('user',$user);
 		call::register('message',$message);
 		call::method('application\\router','process');
@@ -223,66 +225,85 @@ class server {
 		}
 		else {
 			// todo: fail the connection
+			echo 1;
 			$handshakeResponse = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
 		}
 		if (!isset($headers['host']) || !$this->checkHost($headers['host'])) {
+			echo 2;
 			$handshakeResponse = "HTTP/1.1 400 Bad Request";
 		}
 		if (!isset($headers['upgrade']) || strtolower($headers['upgrade']) != 'websocket') {
+			echo 3;
 			$handshakeResponse = "HTTP/1.1 400 Bad Request";
 		}
 		if (!isset($headers['connection']) || strpos(strtolower($headers['connection']), 'upgrade') === FALSE) {
+			echo 4;
 			$handshakeResponse = "HTTP/1.1 400 Bad Request";
 		}
 		if (!isset($headers['sec-websocket-key'])) {
+			echo 5;
 			$handshakeResponse = "HTTP/1.1 400 Bad Request";
 		}
 		else {
 
 		}
 		if (!isset($headers['sec-websocket-version']) || strtolower($headers['sec-websocket-version']) != 13) {
+			echo 6;
 			$handshakeResponse = "HTTP/1.1 426 Upgrade Required\r\nSec-WebSocketVersion: 13";
 		}
 		if (($this->headerOriginRequired && !isset($headers['origin']) ) || ($this->headerOriginRequired && !$this->checkOrigin($headers['origin']))) {
+			echo 7;
 			$handshakeResponse = "HTTP/1.1 403 Forbidden";
 		}
 		if(!$this->checkIP($this->getUserIP($user)['address'])){
+			echo 8;
 			$handshakeResponse = "HTTP/1.1 403 Forbidden";
 		}
-		if (($this->headerSecWebSocketProtocolRequired && !isset($headers['sec-websocket-protocol'])) || ($this->headerSecWebSocketProtocolRequired && !$this->checkWebsocProtocol($headers['sec-websocket-protocol']))) {
+		$protocol   = true;
+		if(!isset($headers['sec-websocket-protocol'])){
+			$protocol   = false;
+			$headers['sec-websocket-protocol']  = protocol::def;
+		}
+		if (!$this->checkWebsocProtocol($headers['sec-websocket-protocol'])) {
+			echo 9;
 			$handshakeResponse = "HTTP/1.1 400 Bad Request";
 		}
 		if (($this->headerSecWebSocketExtensionsRequired && !isset($headers['sec-websocket-extensions'])) || ($this->headerSecWebSocketExtensionsRequired && !$this->checkWebsocExtensions($headers['sec-websocket-extensions']))) {
+			echo 'a';
 			$handshakeResponse = "HTTP/1.1 400 Bad Request";
 		}
 
 		// Done verifying the _required_ headers and optionally required headers.
-
 		if (isset($handshakeResponse)) {
 			socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
 			$this->disconnect($user->socket);
 			return;
 		}
 
-		$user->headers = $headers;
-		$user->handshake = $buffer;
+		$user->headers      = $headers;
+		$user->handshake    = $buffer;
 		socket_getpeername($user->socket,$address);
-		$user->ip         = $address;
-
-		$webSocketKeyHash = sha1($headers['sec-websocket-key'] . $magicGUID);
+		$user->ip           = $address;
+		$parse              = parse_url($headers['get']);
+		$user->path         = trim($parse['path'],'/');
+		$user->fragment     = isset($parse['fragment']) ? $parse['fragment']        : null;
+		if(isset($parse['query'])){
+			parse_str($parse['query'],$user->query);
+		}
+		$webSocketKeyHash   = sha1($headers['sec-websocket-key'] . $magicGUID);
 
 		$rawToken = "";
 		for ($i = 0; $i < 20; $i++) {
 			$rawToken .= chr(hexdec(substr($webSocketKeyHash,$i*2, 2)));
 		}
 		$handshakeToken = base64_encode($rawToken) . "\r\n";
-
-		$subProtocol = (isset($headers['sec-websocket-protocol'])) ? 'Sec-WebSocket-Protocol: '.$this->processProtocol($headers['sec-websocket-protocol'])."\r\n" : "";
+		$user->protocol = protocol::def;
+		$subProtocol = $protocol ? 'Sec-WebSocket-Protocol: '.($user->protocol = $this->processProtocol($headers['sec-websocket-protocol']))."\r\n" : "";
 		$extensions = (isset($headers['sec-websocket-extensions'])) ? $this->processExtensions($headers['sec-websocket-extensions'])."\r\n" : "";
 		call::register('user',$user);
 		call::register('headers',$headers);
-		$customHeaders  = call::method('application\\\router','customHeaders');
-		if(!array($customHeaders)){
+		$customHeaders  = call::method('application\\router','customHeaders');
+		if(!is_array($customHeaders)){
 			$customHeaders  = [];
 		}
 		$custom = "";
@@ -293,7 +314,8 @@ class server {
 				$custom .= $keys[$i].": ".trim($customHeaders[$keys[$i]])."\r\n";
 			}
 		}
-		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\n{$custom}Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken\r\n$subProtocol$extensions";
+		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\n{$custom}Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken$subProtocol$extensions";
+		var_dump($user->protocol);
 		socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
 		$this->connected($user);
 	}
@@ -316,12 +338,11 @@ class server {
 		$protocol   = explode(',',$protocol);
 		$count      = count($protocol)-1;
 		for(;$count > -1;$count--){
-			$protocol[$count]   = trim($protocol[$count]);
+			if(is_callable(['application\\protocol',trim($protocol[$count])])){
+				return true;
+			}
 		}
-		call::register('protocol',$protocol);
-		$re = call::method('application\\router','checkProtocol');
-		call::clear();
-		return $re;
+		return false;
 	}
 
 	protected function checkWebsocExtensions($extensions) {
@@ -332,12 +353,11 @@ class server {
 		$protocol   = explode(',',$protocol);
 		$count      = count($protocol)-1;
 		for(;$count > -1;$count--){
-			$protocol[$count]   = trim($protocol[$count]);
+			if(is_callable(['application\\protocol',$n = trim($protocol[$count])])){
+				return $n;
+			}
 		}
-		call::register('protocol',$protocol);
-		$re = call::method('application\\router','processProtocol');
-		call::clear();
-		return $re;
+		return false;
 	}
 
 	protected function processExtensions($extensions) {

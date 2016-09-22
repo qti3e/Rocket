@@ -21,8 +21,6 @@
 
 namespace core\i18n;
 
-use core\exception\youn_exception;
-
 /**
  * Class country
  * @package core\i18n
@@ -287,7 +285,7 @@ class country {
 	public static function getCountry($code){
 		$code   = strtoupper($code);
 		if(strlen($code) > 2){
-			throw new youn_exception(null,'Country code must have only two letters');
+//			throw new youn_exception(null,'Country code must have only two letters'); todo send error to error logger
 		}
 		if(isset(static::$countries[$code])){
 			return static::$countries[$code];

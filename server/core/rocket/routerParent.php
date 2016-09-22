@@ -1,6 +1,6 @@
 <?php
 /**
- * Your router function must be extends of this class
+ * Your router function must be looh like this class
  *
  * @license GPL
  * @license http://opensource.org/licenses/gpl-license.php GNU Public License, version 3
@@ -26,9 +26,9 @@ abstract class routerParent {
 	 * Check user host name before connection
 	 * @param $hostName
 	 *
-	 * @return void
+	 * @return bool
 	 */
-	public function checkHost($hostName){}
+	public function checkHost($hostName){return true;}
 
 	/**
 	 * Check user ip (for blocking)
@@ -39,12 +39,6 @@ abstract class routerParent {
 	public function checkIP($ip){return true;}
 
 	/**
-	 * Add some custom headers to the response header
-	 * @return array
-	 */
-	public function customHeaders(){return [];}
-
-	/**
 	 * Check GET address
 	 * @param $app
 	 *
@@ -53,39 +47,4 @@ abstract class routerParent {
 	 */
 	public function checkApplication($app){return true;}
 
-	/**
-	 * Process new users
-	 * @return void
-	 */
-	public function connected(){}
-
-	/**
-	 * Process all of messages
-	 * @return void
-	 */
-	public function process(){}
-
-	/**
-	 * Process close status
-	 * @return void
-	 */
-	public function closed(){}
-
-	/**
-	 * Check client protocol
-	 * @param array $protocol
-	 *  List of all sub-protocols that client supports
-	 * @return bool
-	 * Return false when you don't support any of them
-	 */
-	public function checkProtocol($protocol){return true;}
-
-	/**
-	 * Select a protocol to speak with client
-	 * @param $protocol
-	 *  List of all sub-protocols that client supports
-	 *
-	 * @return string
-	 */
-	public function processProtocol($protocol){return '';}
 }

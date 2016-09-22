@@ -17,5 +17,27 @@ use core\rocket\routerParent;
  * @package application
  */
 class router extends routerParent {
+	/**
+	 * Process new users
+	 * @return void
+	 */
+	public function connected(){}
 
+	/**
+	 * Process all of messages
+	 * @return void
+	 */
+	public function process(){}
+
+	/**
+	 * Process close status
+	 * @return void
+	 */
+	public function closed(){}
+
+	/**
+	 * Add some custom headers to the response header
+	 * @return array
+	 */
+	public function customHeaders(){return [];}
 }

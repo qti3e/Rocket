@@ -21,8 +21,6 @@
 
 namespace core\i18n;
 
-use core\exception\error_handler;
-
 /**
  * Class lang
  * @package core\i18n
@@ -59,7 +57,8 @@ class lang {
 			static::$lang = include 'core/i18n/langs/'.$langCode.'.php';
 			return true;
 		}
-		error_handler::DisplayError('Can\'t load language file','Can not find "core/i18n/langs/'.$langCode.'.php"');
+//		error_handler::DisplayError('Can\'t load language file','Can not find "core/i18n/langs/'.$langCode.'.php"');
+		// todo send error to error logger
 		return false;
 	}
 

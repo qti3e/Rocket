@@ -20,6 +20,10 @@ class user {
 	public $headers = array();
 	public $handshake = false;
 	public $ip;
+	public $path;
+	public $query   = [];
+	public $fragment;
+	public $protocol;
 
 	public $handlingPartialPacket = false;
 	public $partialBuffer = "";

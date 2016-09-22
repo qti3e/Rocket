@@ -21,13 +21,13 @@
 
 namespace core\database;
 
+use core\config\config;
 use core\database\drivers\mysqli_driver;
 use core\database\drivers\pdo_driver;
 use core\database\drivers\postgre_driver;
 use core\database\drivers\sqlite_driver;
 use core\database\drivers\sqlserver_driver;
 use core\database\query\where;
-use core\exception\youn_exception;
 
 /**
  * Class query
@@ -58,7 +58,7 @@ class query {
 	 * query constructor.
 	 */
 	public function __construct() {
-		switch(strtolower(db_driver)){
+		switch(strtolower(config::get('db_driver'))){
 			case 'mysqli':
 				static::$driver = new mysqli_driver();
 				break;
@@ -80,7 +80,7 @@ class query {
 				}elseif(extension_loaded('pdo')){
 					static::$driver = new pdo_driver();
 				}else{
-					throw new youn_exception('Can\'t load application because both of pdo and mysqli are disabled');
+//					todo send the error to error logger
 				}
 		}
 	}
