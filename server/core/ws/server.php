@@ -10,16 +10,18 @@
 namespace core\ws;
 
 
-abstract class server {
-	protected $userClass = 'core\\ws\\user'; // redefine this if you want a custom user class.  The custom user class should inherit from WebSocketUser.
+use core\factory\call;
+
+class server {
+	protected $userClass = 'core\\ws\\user';
 	protected $maxBufferSize;
 	protected $master;
 	protected $sockets                              = array();
 	protected $users                                = array();
 	protected $heldMessages                         = array();
 	protected $interactive                          = true;
-	protected $headerOriginRequired                 = false;
-	protected $headerSecWebSocketProtocolRequired   = false;
+	protected $headerOriginRequired                 = true;
+	protected $headerSecWebSocketProtocolRequired   = true;
 	protected $headerSecWebSocketExtensionsRequired = false;
 	protected $blockedIP                            = array();
 
@@ -35,9 +37,23 @@ abstract class server {
 
 	}
 
-	abstract protected function process($user,$message); // Called immediately when the data is recieved.
-	abstract protected function connected($user);        // Called after the handshake response is sent to the client.
-	abstract protected function closed($user);           // Called after the connection is closed.
+	protected function process($user,$message){
+		call::register('user',$user);
+		call::register('message',$message);
+		call::method('application\\router','process');
+		call::clear();
+	}
+
+	protected function connected($user){
+		call::register('user',$user);
+		call::method('application\\router','connected');
+		call::clear();
+	}
+	protected function closed($user){
+		call::register('user',$user);
+		call::method('application\\router','closed');
+		call::clear();
+	}
 
 	protected function connecting($user) {
 		// Override to handle a connecting user, after the instance of the User is created, but before
@@ -250,6 +266,8 @@ abstract class server {
 
 		$user->headers = $headers;
 		$user->handshake = $buffer;
+		socket_getpeername($user->socket,$address);
+		$user->ip         = $address;
 
 		$webSocketKeyHash = sha1($headers['sec-websocket-key'] . $magicGUID);
 
@@ -259,26 +277,51 @@ abstract class server {
 		}
 		$handshakeToken = base64_encode($rawToken) . "\r\n";
 
-		$subProtocol = (isset($headers['sec-websocket-protocol'])) ? $this->processProtocol($headers['sec-websocket-protocol']) : "";
-		$extensions = (isset($headers['sec-websocket-extensions'])) ? $this->processExtensions($headers['sec-websocket-extensions']) : "";
-
-		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken$subProtocol$extensions\r\n";
+		$subProtocol = (isset($headers['sec-websocket-protocol'])) ? 'Sec-WebSocket-Protocol: '.$this->processProtocol($headers['sec-websocket-protocol'])."\r\n" : "";
+		$extensions = (isset($headers['sec-websocket-extensions'])) ? $this->processExtensions($headers['sec-websocket-extensions'])."\r\n" : "";
+		call::register('user',$user);
+		call::register('headers',$headers);
+		$customHeaders  = call::method('application\\\router','customHeaders');
+		if(!array($customHeaders)){
+			$customHeaders  = [];
+		}
+		$custom = "";
+		$count  = count($customHeaders);
+		$keys   = array_keys($customHeaders);
+		for($i  = 0;$i < $count;$i++){
+			if(is_string($customHeaders[$keys[$i]]) || is_int($customHeaders[$keys[$i]])){
+				$custom .= $keys[$i].": ".trim($customHeaders[$keys[$i]])."\r\n";
+			}
+		}
+		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\n{$custom}Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken\r\n$subProtocol$extensions";
 		socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
 		$this->connected($user);
 	}
 
 	protected function checkHost($hostName) {
-		return true; // Override and return false if the host is not one that you would expect.
-		// Ex: You only want to accept hosts from the my-domain.com domain,
-		// but you receive a host from malicious-site.com instead.
+		call::register('hostName',$hostName);
+		$re = call::method('application\\router','checkHost');
+		call::clear();
+		return $re;
 	}
 
 	protected function checkOrigin($origin) {
-		return true; // Override and return false if the origin is not one that you would expect.
+		call::register('origin',$origin);
+		$re = call::method('application\\router','checkOrigin');
+		call::clear();
+		return $re;
 	}
 
 	protected function checkWebsocProtocol($protocol) {
-		return true; // Override and return false if a protocol is not found that you would expect.
+		$protocol   = explode(',',$protocol);
+		$count      = count($protocol)-1;
+		for(;$count > -1;$count--){
+			$protocol[$count]   = trim($protocol[$count]);
+		}
+		call::register('protocol',$protocol);
+		$re = call::method('application\\router','checkProtocol');
+		call::clear();
+		return $re;
 	}
 
 	protected function checkWebsocExtensions($extensions) {
@@ -286,10 +329,15 @@ abstract class server {
 	}
 
 	protected function processProtocol($protocol) {
-		return ""; // return either "Sec-WebSocket-Protocol: SelectedProtocolFromClientList\r\n" or return an empty string.
-		// The carriage return/newline combo must appear at the end of a non-empty string, and must not
-		// appear at the beginning of the string nor in an otherwise empty string, or it will be considered part of
-		// the response body, which will trigger an error in the client as it will not be formatted correctly.
+		$protocol   = explode(',',$protocol);
+		$count      = count($protocol)-1;
+		for(;$count > -1;$count--){
+			$protocol[$count]   = trim($protocol[$count]);
+		}
+		call::register('protocol',$protocol);
+		$re = call::method('application\\router','processProtocol');
+		call::clear();
+		return $re;
 	}
 
 	protected function processExtensions($extensions) {
@@ -626,10 +674,13 @@ abstract class server {
 
 	protected function checkIP($ip){
 		if(isset($this->blockedIP[$ip])){
-			if(time() >= $this->blockedIP[$ip]){
+			call::register('ip',$ip);
+			if(time() >= $this->blockedIP[$ip] || !call::method('application\\router','checkIP')){
 				$this->unblockIP($ip);
+				call::clear();
 				return true;
 			}
+			call::clear();
 			return false;
 		}
 		return true;
