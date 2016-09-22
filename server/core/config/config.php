@@ -53,12 +53,12 @@ class config {
 		'redis_port'    => 6379,
 		//Timeout period in seconds
 		'redis_timeout' => null,
-		//The selected datbase of the Redis server
+		//The selected database of the Redis server
 		'redis_db'      => 0,
 		//Flag to establish persistent connection
 		'redis_persistent'  => '',
 		//The authentication password of the Redis server
-		'redis_password'    => ''
+		'redis_password'    => null
 	];
 
 	/**
