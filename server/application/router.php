@@ -9,11 +9,13 @@
 
 namespace application;
 
+use core\rocket\routerParent;
+
 /**
  * Class router
  *
  * @package application
  */
-class router{
+class router extends routerParent {
 
 }
