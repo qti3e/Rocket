@@ -31,10 +31,10 @@ class CommandController {
 	 */
 	protected static $return;
 	/**
-	 * CommandController constructor.
+	 * Main loop of program
 	 * Print welcome message and ask commands form user
 	 */
-	public function __construct() {
+	public function run() {
 		print "Welcome to Rocket cli mode\n>";
 		while(strtolower($input = trim(fgets(STDIN)).' ') !== 'exit '){
 			if(!empty(trim($input))){
