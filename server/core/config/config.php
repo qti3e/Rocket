@@ -46,7 +46,19 @@ class config {
 		//Database character set
 		'db_charset'    => 'UTF-8',
 		//Database flags, only used in sqlite driver
-		'db_flags'      => null
+		'db_flags'      => null,
+		//The host name of the Redis server
+		'redis_host'    => '127.0.0.1',
+		//The port number of the Redis server
+		'redis_port'    => 6379,
+		//Timeout period in seconds
+		'redis_timeout' => null,
+		//The selected datbase of the Redis server
+		'redis_db'      => 0,
+		//Flag to establish persistent connection
+		'redis_persistent'  => '',
+		//The authentication password of the Redis server
+		'redis_password'    => ''
 	];
 
 	/**
