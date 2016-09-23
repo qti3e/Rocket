@@ -58,7 +58,13 @@ class config {
 		//Flag to establish persistent connection
 		'redis_persistent'  => '',
 		//The authentication password of the Redis server
-		'redis_password'    => null
+		'redis_password'    => null,
+		//Control  panel access IP regex pattern (Only people with the natch IP will be able to see admin panel)
+		'cp_ip_pattern'     => '127.0.0.1',
+		//Control panel authentication username
+		'cp_username'       => 'admin',
+		//Control panel authentication password in sha1 (default value is 12345)
+		'cp_password'       => '8cb2237d0679ca88db6464eac60da96345513964',
 	];
 
 	/**
@@ -183,5 +189,13 @@ class config {
 			}
 		}
 		return $return;
+	}
+
+	/**
+	 * Return all of library for third-party libraries
+	 * @return array
+	 */
+	public static function get_all(){
+		return static::$configs+static::$defaults;
 	}
 }
