@@ -11,15 +11,17 @@ namespace core\ws;
 
 
 use application\protocol;
+use core\config\config;
 use core\factory\call;
+use core\roc\roc;
 
 class server {
 	protected $userClass = 'core\\ws\\user';
 	protected $maxBufferSize;
 	protected $master;
 	protected $sockets                              = array();
-	protected $users                                = array();
-	protected $heldMessages                         = array();
+	public static $users                            = array();
+	public static $heldMessages                     = array();
 	protected $interactive                          = true;
 	protected $headerOriginRequired                 = true;
 	protected $headerSecWebSocketProtocolRequired   = true;
@@ -64,13 +66,13 @@ class server {
 
 	protected function send($user, $message) {
 		if ($user->handshake) {
-			$message = $this->frame($message,$user);
+			$message = static::frame($message,$user);
 			$result = @socket_write($user->socket, $message, strlen($message));
 		}
 		else {
 			// User has not yet performed their handshake.  Store for sending later.
 			$holdingMessage = array('user' => $user, 'message' => $message);
-			$this->heldMessages[] = $holdingMessage;
+			static::$heldMessages[] = $holdingMessage;
 		}
 	}
 
@@ -81,20 +83,20 @@ class server {
 
 	protected function _tick() {
 		// Core maintenance processes, such as retrying failed messages.
-		foreach ($this->heldMessages as $key => $hm) {
+		foreach (static::$heldMessages as $key => $hm) {
 			$found = false;
-			foreach ($this->users as $currentUser) {
+			foreach (static::$users as $currentUser) {
 				if ($hm['user']->socket == $currentUser->socket) {
 					$found = true;
 					if ($currentUser->handshake) {
-						unset($this->heldMessages[$key]);
+						unset(static::$heldMessages[$key]);
 						$this->send($currentUser, $hm['message']);
 					}
 				}
 			}
 			if (!$found) {
 				// If they're no longer in the list of connected users, drop the message.
-				unset($this->heldMessages[$key]);
+				unset(static::$heldMessages[$key]);
 			}
 		}
 	}
@@ -175,7 +177,7 @@ class server {
 
 	protected function connect($socket) {
 		$user = new $this->userClass(uniqid('u'), $socket);
-		$this->users[$user->id] = $user;
+		static::$users[$user->id] = $user;
 		$this->sockets[$user->id] = $socket;
 		$this->connecting($user);
 	}
@@ -184,7 +186,7 @@ class server {
 		$disconnectedUser = $this->getUserBySocket($socket);
 
 		if ($disconnectedUser !== null) {
-			unset($this->users[$disconnectedUser->id]);
+			unset(static::$users[$disconnectedUser->id]);
 
 			if (array_key_exists($disconnectedUser->id, $this->sockets)) {
 				unset($this->sockets[$disconnectedUser->id]);
@@ -200,7 +202,7 @@ class server {
 				socket_close($disconnectedUser->socket);
 			}
 			else {
-				$message = $this->frame('', $disconnectedUser, 'close');
+				$message = static::frame('', $disconnectedUser, 'close');
 				@socket_write($disconnectedUser->socket, $message, strlen($message));
 			}
 		}
@@ -208,6 +210,7 @@ class server {
 
 	protected function doHandshake($user, $buffer) {
 		$magicGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+		var_dump($buffer);
 		$headers = array();
 		$lines = explode("\n",$buffer);
 		foreach ($lines as $line) {
@@ -222,42 +225,73 @@ class server {
 		}
 		if (isset($headers['get'])) {
 			$user->requestedResource = $headers['get'];
+			$parse              = parse_url($headers['get']);
+			$user->path         = trim($parse['path'],'/');
+			$user->fragment     = isset($parse['fragment']) ? $parse['fragment']        : null;
+			if(isset($parse['query'])){
+				parse_str($parse['query'],$user->query);
+			}
+		}
+		socket_getpeername($user->socket,$address);
+		$user->ip           = $address;
+		$cookies    = [];
+		if(isset($headers['cookie'])){
+			$headers['cookie']  = explode(';',$headers['cookie']);
+			$i  = count($headers['cookie'])-1;
+			for(;$i > -1;$i--){
+				$a  = explode('=',$headers['cookie'][$i]);
+				$cookies[rawurldecode(ltrim($a[0]))]   = rawurldecode(rtrim($a[1],';'));
+			}
+		}
+		$user->cookies  = $cookies;
+		if(!isset($headers['sec-websocket-key'])){
+			if(preg_match('/^'.config::get('cp_ip_pattern').'$/',$address)){
+				$user->path == ($user->path == '') ? 'index.roc' : $user->path;
+				//Check user to don't go to the parent directories
+				str_replace('..','',$user->path,$count);
+				if($count == 0){
+					$result     = roc::getParsedFile('core/www/'.basename($user->path));
+
+					$handshakeResponse  = "HTTP/1.1 200 OK\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/html\r\n\r\nHello World!";
+					socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
+					$this->disconnect($user->socket);
+				}else{
+					$handshakeResponse  = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/403.roc');
+					socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
+					$this->disconnect($user->socket);
+				}
+			}else{
+				$handshakeResponse  = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/403.roc');
+				socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
+				$this->disconnect($user->socket);
+
+			}
+			return;
 		}
 		else {
 			// todo: fail the connection
-			echo 1;
-			$handshakeResponse = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
+			$handshakeResponse = "HTTP/1.1 405 Method Not Allowed\r\nServer: ".config::get('version')." (".PHP_OS.")\r\n\r\n";
 		}
 		if (!isset($headers['host']) || !$this->checkHost($headers['host'])) {
-			echo 2;
-			$handshakeResponse = "HTTP/1.1 400 Bad Request";
+			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if (!isset($headers['upgrade']) || strtolower($headers['upgrade']) != 'websocket') {
-			echo 3;
-			$handshakeResponse = "HTTP/1.1 400 Bad Request";
+			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if (!isset($headers['connection']) || strpos(strtolower($headers['connection']), 'upgrade') === FALSE) {
-			echo 4;
-			$handshakeResponse = "HTTP/1.1 400 Bad Request";
+			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if (!isset($headers['sec-websocket-key'])) {
-			echo 5;
-			$handshakeResponse = "HTTP/1.1 400 Bad Request";
-		}
-		else {
-
+			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if (!isset($headers['sec-websocket-version']) || strtolower($headers['sec-websocket-version']) != 13) {
-			echo 6;
-			$handshakeResponse = "HTTP/1.1 426 Upgrade Required\r\nSec-WebSocketVersion: 13";
+			$handshakeResponse = "HTTP/1.1 426 Upgrade Required\r\nSec-WebSocketVersion: 13\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if (($this->headerOriginRequired && !isset($headers['origin']) ) || ($this->headerOriginRequired && !$this->checkOrigin($headers['origin']))) {
-			echo 7;
-			$handshakeResponse = "HTTP/1.1 403 Forbidden";
+			$handshakeResponse = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if(!$this->checkIP($this->getUserIP($user)['address'])){
-			echo 8;
-			$handshakeResponse = "HTTP/1.1 403 Forbidden";
+			$handshakeResponse = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		$protocol   = true;
 		if(!isset($headers['sec-websocket-protocol'])){
@@ -265,12 +299,10 @@ class server {
 			$headers['sec-websocket-protocol']  = protocol::def;
 		}
 		if (!$this->checkWebsocProtocol($headers['sec-websocket-protocol'])) {
-			echo 9;
-			$handshakeResponse = "HTTP/1.1 400 Bad Request";
+			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if (($this->headerSecWebSocketExtensionsRequired && !isset($headers['sec-websocket-extensions'])) || ($this->headerSecWebSocketExtensionsRequired && !$this->checkWebsocExtensions($headers['sec-websocket-extensions']))) {
-			echo 'a';
-			$handshakeResponse = "HTTP/1.1 400 Bad Request";
+			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 
 		// Done verifying the _required_ headers and optionally required headers.
@@ -282,14 +314,6 @@ class server {
 
 		$user->headers      = $headers;
 		$user->handshake    = $buffer;
-		socket_getpeername($user->socket,$address);
-		$user->ip           = $address;
-		$parse              = parse_url($headers['get']);
-		$user->path         = trim($parse['path'],'/');
-		$user->fragment     = isset($parse['fragment']) ? $parse['fragment']        : null;
-		if(isset($parse['query'])){
-			parse_str($parse['query'],$user->query);
-		}
 		$webSocketKeyHash   = sha1($headers['sec-websocket-key'] . $magicGUID);
 
 		$rawToken = "";
@@ -306,16 +330,21 @@ class server {
 		if(!is_array($customHeaders)){
 			$customHeaders  = [];
 		}
+		if(isset($cookies['ROCKETSSID']) && preg_match('/^[0-9a-f]{32}$/',$cookies['ROCKETSSID'])){
+			$user->sessionId    = $cookies['ROCKETSSID'];
+		}else{
+			$user->sessionId    = md5(uniqid('session_id'));
+			$customHeaders[]    = ["Set-Cookie","ROCKETSSID=".$user->sessionId."; expires=Wed, 21 Oct 2038 00:00:00 GMT"];
+		}
 		$custom = "";
 		$count  = count($customHeaders);
 		$keys   = array_keys($customHeaders);
 		for($i  = 0;$i < $count;$i++){
-			if(is_string($customHeaders[$keys[$i]]) || is_int($customHeaders[$keys[$i]])){
-				$custom .= $keys[$i].": ".trim($customHeaders[$keys[$i]])."\r\n";
+			if(is_array($customHeaders[$keys[$i]]) && count($customHeaders[$keys[$i]]) == 2){
+				$custom .= $customHeaders[$keys[$i]][0].": ".trim($customHeaders[$keys[$i]][1])."\r\n";
 			}
 		}
-		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\n{$custom}Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken$subProtocol$extensions";
-		var_dump($user->protocol);
+		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\n".config::get('version')." (".PHP_OS.")\r\n{$custom}Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken$subProtocol$extensions";
 		socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
 		$this->connected($user);
 	}
@@ -365,7 +394,7 @@ class server {
 	}
 
 	protected function getUserBySocket($socket) {
-		foreach ($this->users as $user) {
+		foreach (static::$users as $user) {
 			if ($user->socket == $socket) {
 				return $user;
 			}
@@ -385,7 +414,7 @@ class server {
 		}
 	}
 
-	protected function frame($message, $user, $messageType='text', $messageContinues=false) {
+	public static function frame($message, $user, $messageType='text', $messageContinues=false) {
 		switch ($messageType) {
 			case 'continuous':
 				$b1 = 0;
@@ -550,7 +579,7 @@ class server {
 		$payload = $user->partialMessage . $this->extractPayload($message,$headers);
 
 		if ($pongReply) {
-			$reply = $this->frame($payload,$user,'pong');
+			$reply = self::frame($payload,$user,'pong');
 			socket_write($user->socket,$reply,strlen($reply));
 			return false;
 		}
@@ -711,11 +740,11 @@ class server {
 		/**
 		 * Close all of connections with specific ip
 		 */
-		$count  = count($this->users);
-		$keys   = array_keys($this->users);
+		$count  = count(static::$users);
+		$keys   = array_keys(static::$users);
 		for($i  = 0;$i < $count;$i++){
-			if($this->getUserIP($this->users[$keys[$i]])['address'] == $ip){
-				socket_close($this->users[$keys[$i]]);
+			if($this->getUserIP(static::$users[$keys[$i]])['address'] == $ip){
+				socket_close(static::$users[$keys[$i]]);
 			}
 		}
 	}
