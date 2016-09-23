@@ -7,7 +7,7 @@
  * @author  QTIƎE <Qti3eQti3e@Gmail.com>
  */
 
-namespace core\caching;
+namespace core\cache;
 
 use core\factory\call;
 use core\redis\redis;
@@ -16,7 +16,7 @@ use core\redis\redis;
  * Class mCatch
  * @package core\mCatch
  */
-class caching {
+class cache {
 	/**
 	 * Catch the output of function to the storage so it won't run again if it's
 	 * @param          $seconds
@@ -25,7 +25,7 @@ class caching {
 	 *
 	 * @return mixed
 	 */
-	public static function caching($seconds,callable $function,$dependencies = []){
+	public static function cache($seconds,callable $function,$dependencies = []){
 		array_multisort($dependencies);
 		$seconds    = (int)$seconds;
 		$backTrace  = debug_backtrace()[0];
@@ -36,6 +36,7 @@ class caching {
 			return unserialize($return);
 		}
 		$return     = call::func($function);
+		$redis->sAdd('cache_history',$hash);
 		$redis->set($hash,serialize($return));
 		if($seconds > 0){
 			$redis->expire($hash,$seconds);
