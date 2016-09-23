@@ -25,7 +25,7 @@ class caching {
 	 *
 	 * @return mixed
 	 */
-	public function caching($seconds,callable $function,$dependencies = []){
+	public static function caching($seconds,callable $function,$dependencies = []){
 		array_multisort($dependencies);
 		$seconds    = (int)$seconds;
 		$backTrace  = debug_backtrace()[0];
