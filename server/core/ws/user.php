@@ -9,6 +9,8 @@
 
 namespace core\ws;
 
+use application\protocol;
+
 /**
  * Class user
  *      Users instance
@@ -92,6 +94,11 @@ class user {
 	 * @var bool
 	 */
 	public $hasSentClose = false;
+	/**
+	 * User cookies
+	 * @var array
+	 */
+	public $cookies = [];
 
 	/**
 	 * Set user id and socket resource
@@ -133,5 +140,24 @@ class user {
 	 */
 	public function __isset($name) {
 		return isset($this->data[$name]);
+	}
+
+	/**
+	 * Send message to user if handshake finished otherwise keep message in heldMessage array and send them later
+	 * @param $message
+	 *
+	 * @return void
+	 */
+	public function send($message){
+		$protocol   = $this->protocol;
+		$message    = protocol::$protocol($message);
+		$message    = server::frame($message,$this);
+		if ($this->handshake) {
+			@socket_write($this->socket, $message, strlen($message));
+		}else{
+			// User has not yet performed their handshake.  Store for sending later.
+			$holdingMessage = array('user' => $this, 'message' => $message);
+			server::$heldMessages[] = $holdingMessage;
+		}
 	}
 }
