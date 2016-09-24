@@ -153,7 +153,7 @@ class roc {
 		$filename   = helper::url($filename);
 		//Cache output for a day
 		return cache::cache(24*3600,function() use ($filename){
-			if(file_exists($filename)){
+			if(file_exists($filename) && is_file($filename)){
 				$fp = fopen($filename,'r');
 				$ex = pathinfo($filename,PATHINFO_EXTENSION);
 				$re = '';
