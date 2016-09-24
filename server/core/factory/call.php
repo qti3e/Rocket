@@ -135,7 +135,7 @@ class call {
 	 *
 	 * @return mixed
 	 */
-	private static function name2class($name){
+	public static function name2class($name){
 		return isset(static::$map[$name]) ? static::$map[$name] : $name;
 	}
 
