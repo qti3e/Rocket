@@ -87,7 +87,7 @@ class call {
 			if(isset($defaultValues[$name])){
 				$values[]   = $defaultValues[$name];
 			}elseif ($type === null){
-				$values[]   = self::newInstance(self::name2class($name));
+				$values[]   = self::newInstance($name,true);
 			}else{
 				$values[]   = self::newInstance($type);
 			}
@@ -100,10 +100,13 @@ class call {
 	 * @param       $class
 	 *  Class name or object
 	 * @param array $defaultValues
-	 *
+	 *  Default values
+	 * @param bool  $convert2class
+	 *  Convert class' name to location via name2class function when it's true
 	 * @return null|object
 	 */
-	public static function newInstance($class,$defaultValues = []){
+	public static function newInstance($class,$defaultValues = [],$convert2class = false){
+		$class  = $convert2class ? self::name2class($convert2class) : $class;
 		$defaultValues  = $defaultValues+static::$defaults;
 		if(class_exists($class) || is_object($class)){
 			$class = new \ReflectionClass($class);
@@ -119,7 +122,7 @@ class call {
 				if(isset($defaultValues[$name])){
 					$values[]   = $defaultValues[$name];
 				}elseif($type === null){
-					$values[]   = self::newInstance(self::name2class($name));
+					$values[]   = self::newInstance($name,true);
 				}else{
 					$values[]   = self::newInstance($type);
 				}
