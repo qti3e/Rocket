@@ -87,7 +87,7 @@ class call {
 			if(isset($defaultValues[$name])){
 				$values[]   = $defaultValues[$name];
 			}elseif ($type === null){
-				$values[]   = self::newInstance(self::name2type($name));
+				$values[]   = self::newInstance(self::name2class($name));
 			}else{
 				$values[]   = self::newInstance($type);
 			}
@@ -119,7 +119,7 @@ class call {
 				if(isset($defaultValues[$name])){
 					$values[]   = $defaultValues[$name];
 				}elseif($type === null){
-					$values[]   = self::newInstance(self::name2type($name));
+					$values[]   = self::newInstance(self::name2class($name));
 				}else{
 					$values[]   = self::newInstance($type);
 				}
@@ -135,7 +135,7 @@ class call {
 	 *
 	 * @return mixed
 	 */
-	private static function name2type($name){
+	private static function name2class($name){
 		return isset(static::$map[$name]) ? static::$map[$name] : $name;
 	}
 
@@ -163,7 +163,7 @@ class call {
 			if(isset($defaultValues[$name])){
 				$values[]   = $defaultValues[$name];
 			}elseif ($type === null){
-				$values[]   = self::newInstance(self::name2type($name));
+				$values[]   = self::newInstance(self::name2class($name));
 			}else{
 				$values[]   = self::newInstance($type);
 			}
