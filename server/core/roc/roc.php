@@ -163,7 +163,6 @@ class roc {
 				$header = "Content-Type: ".self::getMimeType($ex)."\r\nContent-Length: ".strlen($re)."\r\n\r\n";
 				if($ex == 'roc'){
 					return $header.preg_replace_callback('/\{%(\w+)\s*?(\|\s*(.+?))?\}/',function($replace){
-						var_dump($replace);
 						$def = isset($replace[3]) ? $replace[3] : null;
 						return config::get($replace[1],$def);
 					},$re);
