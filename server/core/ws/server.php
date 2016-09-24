@@ -15,19 +15,59 @@ use core\config\config;
 use core\factory\call;
 use core\roc\roc;
 
+/**
+ * Class server
+ * @package core\ws
+ */
 class server {
+	/**
+	 * User interface class
+	 * @see user
+	 * @var string
+	 */
 	protected $userClass = 'core\\ws\\user';
+	/**
+	 * Max buffer size config
+	 * @var int
+	 */
 	protected $maxBufferSize;
+	/**
+	 * @var resource
+	 */
 	protected $master;
+	/**
+	 * Array of all connection's sockets
+	 * @var array
+	 */
 	protected $sockets                              = array();
+	/**
+	 * List of all online users
+	 * @var array
+	 */
 	public static $users                            = array();
+	/**
+	 * Array of holding messages
+	 * @var array
+	 */
 	public static $heldMessages                     = array();
+	/**
+	 * Print report to screen when it's true
+	 * @var bool
+	 */
 	protected $interactive                          = true;
-	protected $headerOriginRequired                 = true;
-	protected $headerSecWebSocketProtocolRequired   = true;
-	protected $headerSecWebSocketExtensionsRequired = false;
+	/**
+	 * List of all blocked IPs
+	 * @var array
+	 */
 	protected $blockedIP                            = array();
 
+	/**
+	 * server constructor.
+	 *
+	 * @param     $addr
+	 * @param     $port
+	 * @param int $bufferLength
+	 */
 	function __construct($addr, $port, $bufferLength = 2048) {
 		$this->maxBufferSize = $bufferLength;
 		$this->master = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)  or die("Failed: socket_create()");
@@ -36,34 +76,64 @@ class server {
 		socket_listen($this->master,20)                               or die("Failed: socket_listen()");
 		$this->sockets['m'] = $this->master;
 		$this->stdout("Server started\nListening on: $addr:$port\nMaster socket: ".$this->master);
-
-
 	}
 
+	/**
+	 * Decode message and pass it to process method in application\router
+	 * @param user $user
+	 * @param $message
+	 *
+	 * @return void
+	 */
 	protected function process($user,$message){
-		var_dump($message);
+		$protocol   = $user->protocol;
+		$message    = protocol::$protocol($message);
 		call::register('user',$user);
 		call::register('message',$message);
 		call::method('application\\router','process');
 		call::clear();
 	}
 
+	/**
+	 * Handle user connections
+	 * @param user $user
+	 *
+	 * @return void
+	 */
 	protected function connected($user){
 		call::register('user',$user);
 		call::method('application\\router','connected');
 		call::clear();
 	}
+
+	/**
+	 * Handle disconnections
+	 * @param user $user
+	 *
+	 * @return void
+	 */
 	protected function closed($user){
 		call::register('user',$user);
 		call::method('application\\router','closed');
 		call::clear();
 	}
 
-	protected function connecting($user) {
-		// Override to handle a connecting user, after the instance of the User is created, but before
-		// the handshake has completed.
-	}
+	/**
+	 * Override to handle a connecting user, after the instance of the User is created, but before
+	 *  the handshake has completed.
+	 * @param user $user
+	 *
+	 * @return void
+	 */
+	protected function connecting($user) {}
 
+	/**
+	 * Send message to user (Outside of any sub-protocol)
+	 * @param $user
+	 * @param $message
+	 *
+	 * @return void
+	 */
 	protected function send($user, $message) {
 		if ($user->handshake) {
 			$message = static::frame($message,$user);
@@ -76,13 +146,18 @@ class server {
 		}
 	}
 
-	protected function tick() {
-		// Override this for any process that should happen periodically.  Will happen at least once
-		// per second, but possibly more often.
-	}
+	/**
+	 * Override this for any process that should happen periodically.  Will happen at least once
+	 * per second, but possibly more often.
+	 * @return void
+	 */
+	protected function tick() {}
 
+	/**
+	 * Core maintenance processes, such as retrying failed messages.
+	 * @return void
+	 */
 	protected function _tick() {
-		// Core maintenance processes, such as retrying failed messages.
 		foreach (static::$heldMessages as $key => $hm) {
 			$found = false;
 			foreach (static::$users as $currentUser) {
@@ -175,6 +250,12 @@ class server {
 		}
 	}
 
+	/**
+	 * Create a new user object when it connects
+	 * @param $socket
+	 *
+	 * @return void
+	 */
 	protected function connect($socket) {
 		$user = new $this->userClass(uniqid('u'), $socket);
 		static::$users[$user->id] = $user;
@@ -182,6 +263,14 @@ class server {
 		$this->connecting($user);
 	}
 
+	/**
+	 * Close the user's connection
+	 * @param      $socket
+	 * @param bool $triggerClosed
+	 * @param null $sockErrNo
+	 *
+	 * @return void
+	 */
 	protected function disconnect($socket, $triggerClosed = true, $sockErrNo = null) {
 		$disconnectedUser = $this->getUserBySocket($socket);
 
@@ -208,6 +297,13 @@ class server {
 		}
 	}
 
+	/**
+	 * Parse headers and send the match header response
+	 * @param user $user
+	 * @param $buffer
+	 *
+	 * @return void
+	 */
 	protected function doHandshake($user, $buffer) {
 		$magicGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 		var_dump($buffer);
@@ -233,7 +329,7 @@ class server {
 			}
 		}
 		socket_getpeername($user->socket,$address);
-		$user->ip           = $address;
+		$user->ip   = $address;
 		$cookies    = [];
 		if(isset($headers['cookie'])){
 			$headers['cookie']  = explode(';',$headers['cookie']);
@@ -246,26 +342,28 @@ class server {
 		$user->cookies  = $cookies;
 		if(!isset($headers['sec-websocket-key'])){
 			if(preg_match('/^'.config::get('cp_ip_pattern').'$/',$address)){
-				$user->path == ($user->path == '') ? 'index.roc' : $user->path;
+				$user->path = ($user->path == '') ? 'index.roc' : $user->path;
 				//Check user to don't go to the parent directories
 				str_replace('..','',$user->path,$count);
 				if($count == 0){
-					$result     = roc::getParsedFile('core/www/'.basename($user->path));
-
-					$handshakeResponse  = "HTTP/1.1 200 OK\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\nContent-Type: text/html\r\n\r\nHello World!";
-					socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
-					$this->disconnect($user->socket);
-				}else{
-					$handshakeResponse  = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/403.roc');
-					socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
-					$this->disconnect($user->socket);
+					$result     = roc::getParsedFile($file = 'core/www/'.$user->path);
+					if($result){
+						$handshakeResponse  = "HTTP/1.1 200 OK\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n$result";
+						socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
+						$this->disconnect($user->socket);
+						return;
+					}elseif(!is_dir($file)){
+						var_dump('sa');
+						$handshakeResponse  = "HTTP/1.1 404 Not Found\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/404.roc');
+						socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
+						$this->disconnect($user->socket);
+						return;
+					}
 				}
-			}else{
-				$handshakeResponse  = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/403.roc');
-				socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
-				$this->disconnect($user->socket);
-
 			}
+			$handshakeResponse  = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/403.roc');
+			socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
+			$this->disconnect($user->socket);
 			return;
 		}
 		else {
@@ -287,7 +385,7 @@ class server {
 		if (!isset($headers['sec-websocket-version']) || strtolower($headers['sec-websocket-version']) != 13) {
 			$handshakeResponse = "HTTP/1.1 426 Upgrade Required\r\nSec-WebSocketVersion: 13\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
-		if (($this->headerOriginRequired && !isset($headers['origin']) ) || ($this->headerOriginRequired && !$this->checkOrigin($headers['origin']))) {
+		if (!isset($headers['origin']) || !$this->checkOrigin($headers['origin'])) {
 			$handshakeResponse = "HTTP/1.1 403 Forbidden\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
 		if(!$this->checkIP($this->getUserIP($user)['address'])){
@@ -301,10 +399,6 @@ class server {
 		if (!$this->checkWebsocProtocol($headers['sec-websocket-protocol'])) {
 			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
-		if (($this->headerSecWebSocketExtensionsRequired && !isset($headers['sec-websocket-extensions'])) || ($this->headerSecWebSocketExtensionsRequired && !$this->checkWebsocExtensions($headers['sec-websocket-extensions']))) {
-			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
-		}
-
 		// Done verifying the _required_ headers and optionally required headers.
 		if (isset($handshakeResponse)) {
 			socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
@@ -342,6 +436,8 @@ class server {
 		for($i  = 0;$i < $count;$i++){
 			if(is_array($customHeaders[$keys[$i]]) && count($customHeaders[$keys[$i]]) == 2){
 				$custom .= $customHeaders[$keys[$i]][0].": ".trim($customHeaders[$keys[$i]][1])."\r\n";
+			}elseif(is_array($customHeaders[$keys[$i]])){
+				$custom .= $customHeaders[$keys[$i]];
 			}
 		}
 		$handshakeResponse = "HTTP/1.1 101 Switching Protocols\r\n".config::get('version')." (".PHP_OS.")\r\n{$custom}Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $handshakeToken$subProtocol$extensions";
@@ -349,6 +445,12 @@ class server {
 		$this->connected($user);
 	}
 
+	/**
+	 * Check if host name is allowed
+	 * @param $hostName
+	 *
+	 * @return mixed
+	 */
 	protected function checkHost($hostName) {
 		call::register('hostName',$hostName);
 		$re = call::method('application\\router','checkHost');
@@ -356,6 +458,12 @@ class server {
 		return $re;
 	}
 
+	/**
+	 * Check if origin is allowed
+	 * @param $origin
+	 *
+	 * @return mixed
+	 */
 	protected function checkOrigin($origin) {
 		call::register('origin',$origin);
 		$re = call::method('application\\router','checkOrigin');
@@ -363,6 +471,12 @@ class server {
 		return $re;
 	}
 
+	/**
+	 * Check if the protocol does exits or not
+	 * @param arra $protocol
+	 *
+	 * @return bool
+	 */
 	protected function checkWebsocProtocol($protocol) {
 		$protocol   = explode(',',$protocol);
 		$count      = count($protocol)-1;
@@ -374,10 +488,22 @@ class server {
 		return false;
 	}
 
+	/**
+	 * Check host name and check if it's allowed
+	 * @param $extensions
+	 *
+	 * @return bool
+	 */
 	protected function checkWebsocExtensions($extensions) {
-		return true; // Override and return false if an extension is not found that you would expect.
+		return true;
 	}
 
+	/**
+	 * Select one of supported protocols
+	 * @param array $protocol
+	 *
+	 * @return bool|string
+	 */
 	protected function processProtocol($protocol) {
 		$protocol   = explode(',',$protocol);
 		$count      = count($protocol)-1;
@@ -389,10 +515,22 @@ class server {
 		return false;
 	}
 
+	/**
+	 * Return either "Sec-WebSocket-Extensions: SelectedExtensions\r\n" or return an empty string.
+	 * @param $extensions
+	 *
+	 * @return string
+	 */
 	protected function processExtensions($extensions) {
-		return ""; // return either "Sec-WebSocket-Extensions: SelectedExtensions\r\n" or return an empty string.
+		return "";
 	}
 
+	/**
+	 * Search for a user with it's socket address
+	 * @param $socket
+	 *
+	 * @return mixed|null
+	 */
 	protected function getUserBySocket($socket) {
 		foreach (static::$users as $user) {
 			if ($user->socket == $socket) {
@@ -402,18 +540,39 @@ class server {
 		return null;
 	}
 
+	/**
+	 * Print messages to screen and store them
+	 * @param $message
+	 *
+	 * @return void
+	 */
 	public function stdout($message) {
 		if ($this->interactive) {
 			echo "$message\n";
 		}
 	}
 
+	/**
+	 * Print errors to screen and store them
+	 * @param $message
+	 *
+	 * @return void
+	 */
 	public function stderr($message) {
 		if ($this->interactive) {
 			echo "$message\n";
 		}
 	}
 
+	/**
+	 * Encrypt message to write on the socket
+	 * @param        $message
+	 * @param        $user
+	 * @param string $messageType
+	 * @param bool   $messageContinues
+	 *
+	 * @return string
+	 */
 	public static function frame($message, $user, $messageType='text', $messageContinues=false) {
 		switch ($messageType) {
 			case 'continuous':
@@ -483,7 +642,14 @@ class server {
 		return chr($b1) . chr($b2) . $lengthField . $message;
 	}
 
-	//check packet if he have more than one frame and process each frame individually
+	/**
+	 * check packet if he have more than one frame and process each frame individually
+	 * @param $length
+	 * @param $packet
+	 * @param $user
+	 *
+	 * @return void
+	 */
 	protected function split_packet($length,$packet, $user) {
 		//add PartialPacket and calculate the new $length
 		if ($user->handlingPartialPacket) {
@@ -522,6 +688,11 @@ class server {
 		}
 	}
 
+	/**
+	 * @param $headers
+	 *
+	 * @return int
+	 */
 	protected function calcoffset($headers) {
 		$offset = 2;
 		if ($headers['hasmask']) {
@@ -535,6 +706,12 @@ class server {
 		return $offset;
 	}
 
+	/**
+	 * @param $message
+	 * @param $user
+	 *
+	 * @return bool|int|string
+	 */
 	protected function deframe($message, &$user) {
 		//echo $this->strtohex($message);
 		$headers = $this->extractHeaders($message);
@@ -599,6 +776,12 @@ class server {
 		return false;
 	}
 
+	/**
+	 * Extract header values
+	 * @param $message
+	 *
+	 * @return array
+	 */
 	protected function extractHeaders($message) {
 		$header = array('fin'     => $message[0] & chr(128),
 			'rsv1'    => $message[0] & chr(64),
@@ -638,6 +821,12 @@ class server {
 		return $header;
 	}
 
+	/**
+	 * @param $message
+	 * @param $headers
+	 *
+	 * @return string
+	 */
 	protected function extractPayload($message,$headers) {
 		$offset = 2;
 		if ($headers['hasmask']) {
@@ -652,6 +841,12 @@ class server {
 		return substr($message,$offset);
 	}
 
+	/**
+	 * @param $headers
+	 * @param $payload
+	 *
+	 * @return int
+	 */
 	protected function applyMask($headers,$payload) {
 		$effectiveMask = "";
 		if ($headers['hasmask']) {
@@ -669,6 +864,13 @@ class server {
 		}
 		return $effectiveMask ^ $payload;
 	}
+
+	/**
+	 * @param $headers
+	 * @param $user
+	 *
+	 * @return bool
+	 */
 	protected function checkRSVBits($headers,$user) { // override this method if you are using an extension where the RSV bits are used.
 		if (ord($headers['rsv1']) + ord($headers['rsv2']) + ord($headers['rsv3']) > 0) {
 			//$this->disconnect($user); // todo: fail connection
@@ -677,6 +879,12 @@ class server {
 		return false;
 	}
 
+	/**
+	 * Convert string to hex
+	 * @param $str
+	 *
+	 * @return string
+	 */
 	protected function strtohex($str) {
 		$strout = "";
 		for ($i = 0; $i < strlen($str); $i++) {
@@ -698,6 +906,11 @@ class server {
 		return $strout . "\n";
 	}
 
+	/** Print  headers to the screen
+	 * @param $headers
+	 *
+	 * @return void
+	 */
 	protected function printHeaders($headers) {
 		echo "Array\n(\n";
 		foreach ($headers as $key => $value) {
@@ -713,6 +926,12 @@ class server {
 		echo ")\n";
 	}
 
+	/**
+	 * Get user's IP from connection
+	 * @param $user
+	 *
+	 * @return array
+	 */
 	protected function getUserIP($user){
 		socket_getpeername($user->socket,$address,$port);
 		return [
@@ -721,6 +940,12 @@ class server {
 		];
 	}
 
+	/**
+	 * Check if user's IP is allowed (not in block list)
+	 * @param $ip
+	 *
+	 * @return bool
+	 */
 	protected function checkIP($ip){
 		if(isset($this->blockedIP[$ip])){
 			call::register('ip',$ip);
@@ -735,6 +960,13 @@ class server {
 		return true;
 	}
 
+	/**
+	 * Block an IP address
+	 * @param     $ip
+	 * @param int $expire
+	 *
+	 * @return void
+	 */
 	protected function blockIP($ip,$expire = 1800){
 		$this->blockedIP[$ip] = time()+$expire;//Unblock user automatically after 30 minutes (1800s)
 		/**
@@ -749,12 +981,25 @@ class server {
 		}
 	}
 
+	/**
+	 * Block a user
+	 * @param     $user
+	 * @param int $expire
+	 *
+	 * @return void
+	 */
 	protected function blockUser($user,$expire = 1800){
 		$ip = $this->getUserIP($user)['address'];
 		$this->blockedIP[$ip] = time()+$expire;//Unblock user automatically after 30 minutes (1800s)
 		socket_close($user);
 	}
 
+	/**
+	 * Unblock an IP
+	 * @param $ip
+	 *
+	 * @return void
+	 */
 	protected function unblockIP($ip){
 		unset($this->blockedIP[$ip]);
 	}
