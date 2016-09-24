@@ -71,7 +71,7 @@ if( ! defined('CRLF')) define('CRLF', sprintf('%s%s', chr(13), chr(10)));
  * @method bool|string   hGet(string $key, string $field)
  * @method bool|int      hLen(string $key)
  * @method bool          hDel(string $key, string $field)
- * @method array         hKeys(string $key, string $field)
+ * @method array         hKeys(string $key)
  * @method array         hVals(string $key)
  * @method array         hGetAll(string $key)
  * @method bool          hExists(string $key, string $field)
