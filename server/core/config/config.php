@@ -18,7 +18,12 @@ class config {
 	 * This array contains all of config values
 	 * @var array
 	 */
-	protected static $configs   = [];
+	protected static $configs   = [
+		//Rocket name and version (Please don't edit this line, thanks :) )
+		'version'   => 'Rocket/0.2-beta',
+		//operation system name
+		'os'        => PHP_OS
+	];
 	/**
 	 * Defaults value for configs
 	 * @note All of keys must be in lower case.
