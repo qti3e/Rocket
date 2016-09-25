@@ -70,6 +70,26 @@ class config {
 		'cp_username'       => 'admin',
 		//Control panel authentication password in sha1 (default value is 12345)
 		'cp_password'       => '8cb2237d0679ca88db6464eac60da96345513964',
+
+		//Logger driver name including the namespace
+		'logger_driver'     => 'core\\logger\\drivers\\redis',
+		//Configs for each driver goes here depends on the driver type
+
+		//Configs for the Redis based logger driver
+		//The host name of the logger's Redis server
+		'logger_redis_host'         => '127.0.0.1',
+		//The port number of the logger's Redis server
+		'logger_redis_port'         => 6379,
+		//Timeout period in seconds
+		'logger_redis_timeout'      => null,
+		//The selected database of the logger's Redis server
+		'logger_redis_db'           => 0,
+		//Flag to establish persistent connection
+		'logger_redis_persistent'   => '',
+		//The authentication password of the logger's Redis server
+		'logger_redis_password'     => null,
+
+		//</End of driver's config
 	];
 
 	/**
