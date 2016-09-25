@@ -88,6 +88,8 @@ class config {
 		'logger_redis_persistent'   => '',
 		//The authentication password of the logger's Redis server
 		'logger_redis_password'     => null,
+		//Hash the ids for compress them, we use crc32 as default because it's the shortest hash in PHP (8 ASCII characters)
+		'logger_redis_hash_algo'    => 'crc32'
 
 		//</End of driver's config
 	];
