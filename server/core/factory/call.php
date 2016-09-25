@@ -87,9 +87,9 @@ class call {
 			if(isset($defaultValues[$name])){
 				$values[]   = $defaultValues[$name];
 			}elseif ($type === null){
-				$values[]   = self::newInstance($name,true);
+				$values[]   = self::newInstance($name,$defaultValues,true);
 			}else{
-				$values[]   = self::newInstance($type);
+				$values[]   = self::newInstance($type,$defaultValues);
 			}
 		}
 		return call_user_func_array([$c,$method],$values);

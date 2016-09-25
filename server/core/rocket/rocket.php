@@ -11,6 +11,7 @@ namespace core\rocket;
 
 use core\config\config;
 use core\console\CommandController;
+use core\redis\redis;
 use core\ws\server;
 
 /**
@@ -18,6 +19,10 @@ use core\ws\server;
  * @package core\rocket
  */
 class rocket {
+	/**
+	 * @var
+	 */
+	public static $redis;
 	/**
 	 * Autoload function
 	 * This function is registered as auto load function with spl_autoload_register in __construct method
@@ -62,6 +67,15 @@ class rocket {
 	public function __construct($args) {
 		spl_autoload_register([$this,'autoLoad']);
 		$args           = implode(' ',$args).' ';
+		if(config::get('need_redis',true)){
+			$redis_host = config::get('redis_host');
+			$redis_port = config::get('redis_port');
+			$redis_db   = config::get('redis_db');
+			$redis_timeout      = config::get('redis_timeout');
+			$redis_persistent   = config::get('redis_persistent');
+			$redis_password     = config::get('redis_password');
+			static::$redis      = new redis($redis_host,$redis_port,$redis_timeout,$redis_persistent,$redis_db,$redis_password);
+		}
 		if(preg_match('/\s+(-c|--command)\s+/',$args)){
 			$this->object   = new CommandController();
 		}else{
