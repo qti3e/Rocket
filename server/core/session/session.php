@@ -38,7 +38,7 @@ class session {
 	public function __construct(user $user,$redis) {
 		$this->sessionId    = $user->sessionId;
 		if(static::$redis == null){
-			static::$redis  = call::newInstance('redis',true);
+			static::$redis  = call::newInstance('redis',[],true);
 		}
 	}
 
