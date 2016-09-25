@@ -82,8 +82,8 @@ class config {
 		'logger_redis_port'         => 6379,
 		//Timeout period in seconds
 		'logger_redis_timeout'      => null,
-		//The selected database of the logger's Redis server
-		'logger_redis_db'           => 0,
+		//The selected database of the logger's Redis server (Note it can be different from your main database)
+		'logger_redis_db'           => 1,
 		//Flag to establish persistent connection
 		'logger_redis_persistent'   => '',
 		//The authentication password of the logger's Redis server
