@@ -19,11 +19,6 @@ use core\redis\redis as cRedis;
  */
 class redis implements driverInterface {
 	/**
-	 * When it's true it means the instance of the cRedis was generated before
-	 * @var bool
-	 */
-	protected static $isConnected  = false;
-	/**
 	 * Instance of the Redis library
 	 * @var cRedis
 	 */
@@ -31,9 +26,8 @@ class redis implements driverInterface {
 
 	/**
 	 * Make a connection to the logger's Redis server
-	 * @return void
 	 */
-	protected function connect(){
+	public function __construct(){
 		$host       = config::get('logger_redis_host');
 		$port       = config::get('logger_redis_port');
 		$timeout    = config::get('logger_redis_timeout');
@@ -41,7 +35,6 @@ class redis implements driverInterface {
 		$persistent = config::get('logger_redis_persistent');
 		$password   = config::get('logger_redis_password');
 		static::$instance   = new cRedis($host,$port,$timeout,$persistent,$db,$password);
-		static::$isConnected= true;
 	}
 
 	/**
@@ -54,8 +47,6 @@ class redis implements driverInterface {
 	 * @return string
 	 */
 	public function infoWriter($message, $line, $file, $time) {
-		if(!static::$isConnected)
-			$this->connect();
 		$id = hash(config::get('logger_redis_hash_algo'),uniqid('log_i_'));
 		static::$instance->hMSet($id,[
 			'message'   => $message,
@@ -78,8 +69,6 @@ class redis implements driverInterface {
 	 * @return string
 	 */
 	public function warningWriter($message, $line, $file, $time) {
-		if(!static::$isConnected)
-			$this->connect();
 		$id = hash(config::get('logger_redis_hash_algo'),uniqid('log_w_'));
 		static::$instance->hMSet($id,[
 			'message'   => $message,
@@ -102,8 +91,6 @@ class redis implements driverInterface {
 	 * @return string
 	 */
 	public function errorWriter($message, $line, $file, $time) {
-		if(!static::$isConnected)
-			$this->connect();
 		$id = hash(config::get('logger_redis_hash_algo'),uniqid('log_e_'));
 		static::$instance->hMSet($id,[
 			'message'   => $message,
@@ -123,8 +110,6 @@ class redis implements driverInterface {
 	 * @return array
 	 */
 	public function getAll($limit) {
-		if(!static::$isConnected)
-			$this->connect();
 		$limit  = $limit <= 0 ? -1 : $limit;
 		$logs   = static::$instance->lRange('logs',0,$limit);
 		$count  = count($logs);
