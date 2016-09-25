@@ -20,9 +20,17 @@ use core\ws\server;
  */
 class rocket {
 	/**
-	 * @var
+	 * @var redis|null
 	 */
-	public static $redis;
+	protected static $redis;
+
+	/**
+	 * Return redis instance
+	 * @return redis|null
+	 */
+	public static function redis(){
+		return static::$redis;
+	}
 	/**
 	 * Autoload function
 	 * This function is registered as auto load function with spl_autoload_register in __construct method
@@ -67,10 +75,11 @@ class rocket {
 	public function __construct($args) {
 		spl_autoload_register([$this,'autoLoad']);
 		$args           = implode(' ',$args).' ';
+		//Disable using the Redis (It doesn't work well now because most of libraries are depend on the Redis)
 		if(config::get('need_redis',true)){
-			$redis_host = config::get('redis_host');
-			$redis_port = config::get('redis_port');
-			$redis_db   = config::get('redis_db');
+			$redis_host         = config::get('redis_host');
+			$redis_port         = config::get('redis_port');
+			$redis_db           = config::get('redis_db');
 			$redis_timeout      = config::get('redis_timeout');
 			$redis_persistent   = config::get('redis_persistent');
 			$redis_password     = config::get('redis_password');
