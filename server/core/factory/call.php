@@ -37,7 +37,8 @@ class call {
 		'date'      => 'core\\date\\date.php',
 		'ftp'       => 'core\\ftp\\ftp',
 		'algorithms'=> 'core\\algorithms\\algorithms',
-		'call'      => 'core\\factory\\call'
+		'call'      => 'core\\factory\\call',
+		'interval'  => 'core\\interval\\interval',
 	];
 
 	/**
