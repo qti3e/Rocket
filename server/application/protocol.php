@@ -9,33 +9,16 @@
 
 namespace application;
 
+use core\protocols\json;
+
 /**
  * Class protocol
  * @package application
  */
 class protocol {
+	use json;
 	/**
 	 *  Default protocol name
 	 */
 	const def  = "json";
-
-	/**
-	 * Json encode function
-	 * @param mixed $value
-	 *
-	 * @return string
-	 */
-	public static function json($value){
-		return json_encode($value);
-	}
-
-	/**
-	 * Json decode function
-	 * @param string $json
-	 *
-	 * @return mixed
-	 */
-	public static function json_decode($json){
-		return self::json_decode($json);
-	}
 }
