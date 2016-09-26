@@ -10,6 +10,8 @@
 namespace core\factory;
 
 //todo catching the process
+use core\rocket\rocket;
+
 /**
  * Class caller
  * @package core\factory
@@ -72,6 +74,7 @@ class call {
 	 * @return mixed
 	 */
 	public static function method($class,$method,$defaultValues = []){
+		$defaultValues['redis'] = rocket::redis();
 		$defaultValues  = $defaultValues+static::$defaults;
 		if(!is_callable([$class,$method])){
 			return static::notCallable;
@@ -107,6 +110,7 @@ class call {
 	 */
 	public static function newInstance($class,$defaultValues = [],$convert2class = false){
 		$class  = $convert2class ? self::name2class($convert2class) : $class;
+		$defaultValues['redis'] = rocket::redis();
 		$defaultValues  = $defaultValues+static::$defaults;
 		if(class_exists($class) || is_object($class)){
 			$class = new \ReflectionClass($class);
@@ -151,6 +155,7 @@ class call {
 	 *
 	 */
 	public static function func($function,$defaultValues = []){
+		$defaultValues['redis'] = rocket::redis();
 		$defaultValues  = $defaultValues+static::$defaults;
 		if(!is_callable($function)){
 			return static::notCallable;
