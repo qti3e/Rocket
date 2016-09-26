@@ -23,6 +23,11 @@ class interval {
 	 * @var array
 	 */
 	protected static $holdings  = [];
+	/**
+	 * Last run time
+	 * @var int
+	 */
+	protected static $time      = 0;
 
 	/**
 	 * Run a code after some seconds
@@ -44,6 +49,8 @@ class interval {
 	 */
 	public static function run(){
 		$time   = time();
+		if($time == static::$time)
+			return;
 		$keys   = array_keys(static::$holdings);
 		$i      = count($keys)-1;
 		for(;$i > -1;$i--){
