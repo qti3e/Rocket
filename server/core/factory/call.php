@@ -39,6 +39,8 @@ class call {
 		'algorithms'=> 'core\\algorithms\\algorithms',
 		'call'      => 'core\\factory\\call',
 		'interval'  => 'core\\interval\\interval',
+		'sender'    => 'core\\sender\\sender',
+		'router'    => 'core\\router\\routerProvider', //Alias of routerProvider
 		'routerProvider'    => 'core\\router\\routerProvider',
 	];
 
