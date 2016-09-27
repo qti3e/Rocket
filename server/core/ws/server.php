@@ -134,7 +134,7 @@ class server {
 	 *
 	 * @return void
 	 */
-	protected function send($user, $message) {
+	public static function send($user, $message) {
 		if ($user->handshake) {
 			$message = static::frame($message,$user);
 			$result = @socket_write($user->socket, $message, strlen($message));
