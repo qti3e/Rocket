@@ -21,6 +21,8 @@
 
 namespace core\i18n;
 
+use core\logger\logger;
+
 /**
  * Class country
  * @package core\i18n
@@ -280,12 +282,11 @@ class country {
 	 *
 	 * @return bool|string
 	 *  Return false when country does not exists and throws an exception  when code is not valid.
-	 * @throws youn_exception
 	 */
 	public static function getCountry($code){
 		$code   = strtoupper($code);
 		if(strlen($code) > 2){
-//			throw new youn_exception(null,'Country code must have only two letters'); todo send error to error logger
+			logger::error('Country code must have only two letters.',1);
 		}
 		if(isset(static::$countries[$code])){
 			return static::$countries[$code];
