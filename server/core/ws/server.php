@@ -13,6 +13,7 @@ namespace core\ws;
 use application\protocol;
 use core\config\config;
 use core\factory\call;
+use core\logger\logger;
 use core\roc\roc;
 
 /**
@@ -547,6 +548,7 @@ class server {
 	 * @return void
 	 */
 	public function stdout($message) {
+		logger::info($message,1);
 		if ($this->interactive) {
 			echo "$message\n";
 		}
@@ -559,6 +561,7 @@ class server {
 	 * @return void
 	 */
 	public function stderr($message) {
+		logger::error($message,1);
 		if ($this->interactive) {
 			echo "$message\n";
 		}
