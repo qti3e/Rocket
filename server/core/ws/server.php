@@ -13,6 +13,7 @@ namespace core\ws;
 use application\protocol;
 use core\config\config;
 use core\factory\call;
+use core\interval\interval;
 use core\logger\logger;
 use core\roc\roc;
 
@@ -182,6 +183,8 @@ class server {
 	 */
 	public function run() {
 		while(true) {
+			//Run time out method
+			interval::run();
 			if (empty($this->sockets)) {
 				$this->sockets['m'] = $this->master;
 			}
