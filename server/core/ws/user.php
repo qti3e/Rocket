@@ -10,6 +10,7 @@
 namespace core\ws;
 
 use application\protocol;
+use core\rocket\app;
 
 /**
  * Class user
@@ -99,6 +100,11 @@ class user {
 	 * @var array
 	 */
 	public $cookies = [];
+	/**
+	 * User's selected application with router class
+	 * @var app
+	 */
+	public $app;
 
 	/**
 	 * Set user id and socket resource
