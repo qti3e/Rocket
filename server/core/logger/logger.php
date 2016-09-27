@@ -46,14 +46,15 @@ class logger {
 	 * Write an system info to logs
 	 *  This type of logs are only for give some news about system status
 	 *  Like: Server started at 9:30
-	 * @param $message
+	 * @param string $message
+	 * @param int $step
 	 *
 	 * @return void
 	 */
-	public static function info($message){
+	public static function info($message,$step = 0){
 		if(!static::$driverLoaded)
 			static::load();
-		$backtrace  = debug_backtrace()[0];
+		$backtrace  = debug_backtrace()[$step];
 		$line       = $backtrace['line'];
 		$file       = $backtrace['file'];
 		$time       = time();
@@ -62,14 +63,15 @@ class logger {
 
 	/**
 	 * Write a runtime warning to logs
-	 * @param $message
+	 * @param string $message
+	 * @param int $step
 	 *
 	 * @return void
 	 */
-	public static function warning($message){
+	public static function warning($message,$step = 0){
 		if(!static::$driverLoaded)
 			static::load();
-		$backtrace  = debug_backtrace()[0];
+		$backtrace  = debug_backtrace()[$step];
 		$line       = $backtrace['line'];
 		$file       = $backtrace['file'];
 		$time       = time();
@@ -78,14 +80,15 @@ class logger {
 
 	/**
 	 * Write an error to logs
-	 * @param $message
+	 * @param string $message
+	 * @param int $step
 	 *
 	 * @return void
 	 */
-	public static function error($message){
+	public static function error($message,$step = 0){
 		if(!static::$driverLoaded)
 			static::load();
-		$backtrace  = debug_backtrace()[0];
+		$backtrace  = debug_backtrace()[$step];
 		$line       = $backtrace['line'];
 		$file       = $backtrace['file'];
 		$time       = time();
