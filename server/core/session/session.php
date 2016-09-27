@@ -11,6 +11,7 @@ namespace core\session;
 
 
 use core\factory\call;
+use core\interval\interval;
 use core\redis\redis;
 use core\ws\user;
 
@@ -94,7 +95,20 @@ class session {
 	public function keys(){
 		return static::$redis->hKeys($this->sessionId);
 	}
-	//todo write expire($name,$seconds) function after writing timeout library
+
+	/**
+	 * Remove key after some seconds
+	 * @param $name
+	 * @param $seconds
+	 *
+	 * @return void
+	 */
+	public function expire($name,$seconds){
+		interval::timeout(function() use ($name,$this){
+			$this->del($name);
+		},$seconds);
+	}
+	
 	/**
 	 * Return all of session storage at once
 	 * @return array
