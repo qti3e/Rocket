@@ -28,6 +28,7 @@ use core\database\drivers\postgre_driver;
 use core\database\drivers\sqlite_driver;
 use core\database\drivers\sqlserver_driver;
 use core\database\query\where;
+use core\logger\logger;
 
 /**
  * Class query
@@ -80,7 +81,7 @@ class query {
 				}elseif(extension_loaded('pdo')){
 					static::$driver = new pdo_driver();
 				}else{
-//					todo send the error to error logger
+					logger::error('Can not find database driver.');
 				}
 		}
 	}
