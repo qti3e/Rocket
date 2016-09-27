@@ -9,7 +9,6 @@
 
 namespace core\factory;
 
-//todo catching the process
 use core\rocket\rocket;
 
 /**
