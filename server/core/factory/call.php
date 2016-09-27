@@ -39,6 +39,7 @@ class call {
 		'algorithms'=> 'core\\algorithms\\algorithms',
 		'call'      => 'core\\factory\\call',
 		'interval'  => 'core\\interval\\interval',
+		'routerProvider'    => 'core\\router\\routerProvider',
 	];
 
 	/**
