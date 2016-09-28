@@ -368,10 +368,6 @@ class server {
 			$this->disconnect($user->socket);
 			return;
 		}
-		else {
-			// todo: fail the connection
-			$handshakeResponse = "HTTP/1.1 405 Method Not Allowed\r\nServer: ".config::get('version')." (".PHP_OS.")\r\n\r\n";
-		}
 		if (!isset($headers['host']) || !$this->checkHost($headers['host'])) {
 			$handshakeResponse = "HTTP/1.1 400 Bad Request\r\nServer: ".config::get('version')." (".PHP_OS.")";
 		}
