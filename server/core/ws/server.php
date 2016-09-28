@@ -310,7 +310,6 @@ class server {
 	 */
 	protected function doHandshake($user, $buffer) {
 		$magicGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-		var_dump($buffer);
 		$headers = array();
 		$lines = explode("\n",$buffer);
 		foreach ($lines as $line) {
@@ -357,7 +356,6 @@ class server {
 						$this->disconnect($user->socket);
 						return;
 					}elseif(!is_dir($file)){
-						var_dump('sa');
 						$handshakeResponse  = "HTTP/1.1 404 Not Found\r\nServer: ".config::get('version')." (".PHP_OS.")\r\nAccess-Control-Allow-Origin: *\r\n".roc::getParsedFile('core/www/404.roc');
 						socket_write($user->socket,$handshakeResponse,strlen($handshakeResponse));
 						$this->disconnect($user->socket);
