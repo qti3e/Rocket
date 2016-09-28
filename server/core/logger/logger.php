@@ -39,7 +39,7 @@ class logger {
 	 * @return void
 	 */
 	protected static function load(){
-		static::$driver         = new (config::get('logger_driver'));
+		static::$driver         = new (config::get('logger_driver'))();
 		static::$driverLoaded   = true;
 	}
 	/**
