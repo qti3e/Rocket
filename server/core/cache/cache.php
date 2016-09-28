@@ -10,7 +10,7 @@
 namespace core\cache;
 
 use core\factory\call;
-use core\redis\redis;
+use core\rocket\rocket;
 
 /**
  * Class mCatch
@@ -30,7 +30,7 @@ class cache {
 		$seconds    = (int)$seconds;
 		$backTrace  = debug_backtrace()[0];
 		$hash       = md5(json_encode($dependencies).($backTrace['file'].$backTrace['line'].$backTrace['function']));
-		$redis      = new redis();
+		$redis      = rocket::redis();
 		$return     = $redis->get($hash);
 		if($return){
 			return unserialize($return);
