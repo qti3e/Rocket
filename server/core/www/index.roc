@@ -8,6 +8,8 @@
     </script>
     <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="assets/css/styles.css">
+    <script src="assets/js/jquery-2.0.0.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
     <script src="assets/js/angular.js"></script>
     <script src="assets/js/angular-animate.js"></script>
     <script src="assets/js/angular-ui-router.js"></script>
@@ -44,7 +46,7 @@
 <footer class="navbar navbar-fixed-bottom">
     <hr>
     <div class="navbar-inner">
-        <div class="container text-center">
+        <div class="container text-center hidden-xs">
             This app is running under <b>{%version | Rocket}</b>, created by <a href="https://github.com/qti3e" title="QTIƎE" target="_blank">Alireza Ghadimi</a>.
         </div>
     </div>
