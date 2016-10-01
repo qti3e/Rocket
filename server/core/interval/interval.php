@@ -23,6 +23,11 @@ class interval {
 	 * @var array
 	 */
 	protected static $holdings  = [];
+	/** All of functions that should run regularly
+	 * @var array
+	 */
+	protected static $intervals = [];
+
 	/**
 	 * Last run time
 	 * @var int
@@ -44,6 +49,23 @@ class interval {
 	}
 
 	/**
+	 *  Run your code regularly
+	 * @param callable $function
+	 * @param int      $seconds
+	 *
+	 * @return void
+	 */
+	public static function timeInterval(callable  $function,$seconds = 60){
+		//seconds and mod
+		$mod    = time() % $seconds;
+		if(!isset(static::$intervals[$seconds]))
+			static::$intervals[$seconds]    = [];
+		if(!isset(static::$intervals[$seconds][$mod]))
+			static::$intervals[$seconds][$mod]  = [];
+		static::$intervals[$seconds][$mod][]    = $function;
+	}
+
+	/**
 	 * Do all holding jobs
 	 * @return void
 	 */
@@ -60,6 +82,18 @@ class interval {
 					call::func(static::$holdings[$key][$c]);
 				}
 				unset(static::$holdings[$key]);
+			}
+		}
+		$keys   = array_keys(static::$intervals);
+		$i      = count($keys)-1;
+		for(;$i > -1;$i--){
+			$key    = $keys[$i];
+			$mod    = $time % $key;
+			if(isset(static::$intervals[$key][$mod])){
+				$j  = count(static::$intervals[$key][$mod])-1;
+				for(;$j > -1;$j--){
+					call::func(static::$intervals[$key][$mod][$j]);
+				}
 			}
 		}
 	}
