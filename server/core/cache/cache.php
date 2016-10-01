@@ -22,14 +22,16 @@ class cache {
 	 * @param          $seconds
 	 * @param callable $function
 	 * @param array    $dependencies
+	 * @param string   $id
 	 *
 	 * @return mixed
 	 */
-	public static function cache($seconds,callable $function,$dependencies = []){
+	public static function cache($seconds,callable $function,$dependencies = [],&$id = null){
 		array_multisort($dependencies);
 		$seconds    = (int)$seconds;
 		$backTrace  = debug_backtrace()[0];
 		$hash       = md5(json_encode($dependencies).($backTrace['file'].$backTrace['line'].$backTrace['function']));
+		$id         = $hash;
 		$redis      = rocket::redis();
 		$return     = $redis->get($hash);
 		if($return){
